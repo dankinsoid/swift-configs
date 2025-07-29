@@ -40,17 +40,6 @@ To become a compatible configs backend that all SwiftConfigs consumers can use, 
 1. Implement a type (usually a struct) that implements ConfigsHandler, a protocol provided by SwiftConfigs
 2. Instruct SwiftConfigs to use your configs backend implementation.
 
-an ConfigsHandler or configs backend implementation is anything that conforms to the following protocol
-```swift
-public protocol ConfigsHandler {
-
-    func fetch(completion: @escaping (Error?) -> Void)
-    func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation?
-    func value(for key: String) -> String?
-}
-```
-Where `value(for key: String)` is a function that returns a value for a given key.
-
 Instructing SwiftConfigs to use your configs backend as the one the whole application (including all libraries) should use is very simple:
 
 ```swift
