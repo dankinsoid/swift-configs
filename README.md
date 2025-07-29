@@ -5,26 +5,6 @@ To make SwiftConfigs really work for real-world workloads, we need SwiftConfigs-
 
 ## Getting Started
 
-### Adding the dependency
-```swift
-.package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.0"),
-```
-
-<details>
-<summary>Old deprecated dependency (will be removed)</summary>
-
-To depend on the configs API package, you need to declare your dependency in your Package.swift:
-```swift
-.package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.0"),
-```
-and to your application/library target, add "SwiftConfigs" to your dependencies, e.g. like this:
-```swift
-.target(name: "BestExampleApp", dependencies: [
-    .product(name: "SwiftConfigs", package: "swift-configs")
-],
-```
-</details>
-
 ### Let's read a config
 1. let's import the SwiftConfigs API package
 ```swift
