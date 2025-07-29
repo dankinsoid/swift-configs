@@ -61,28 +61,28 @@ final class SwiftConfigsTests: XCTestCase {
 
     func testDidFetch() async throws {
         // Arrange
-        let remoteConfigs = Configs()
+        let configs = Configs()
 
         // Act
-        let didFetch = remoteConfigs.didFetch
+        let didFetch = configs.didFetch
 
         // Assert
         XCTAssertFalse(didFetch)
 
         // Act
         handler.values = ["key": "value"]
-        try await remoteConfigs.fetchIfNeeded()
+        try await configs.fetchIfNeeded()
         // Assert
-        XCTAssertTrue(remoteConfigs.didFetch)
+        XCTAssertTrue(configs.didFetch)
     }
 
     func testFetchIfNeeded() async throws {
         // Arrange
-        let remoteConfigs = Configs()
+        let configs = Configs()
 
         // Act
         handler.values = ["key": "value"]
-        let value = try await remoteConfigs.fetchIfNeeded(\.testKey)
+        let value = try await configs.fetchIfNeeded(\.testKey)
 
         // Assert
         XCTAssertEqual(value, "value")

@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-remote-configs",
+    name: "swift-configs",
     products: [
         .library(name: "SwiftConfigs", targets: ["SwiftConfigs"]),
     ],

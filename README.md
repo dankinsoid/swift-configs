@@ -15,12 +15,12 @@ To make SwiftConfigs really work for real-world workloads, we need SwiftConfigs-
 
 To depend on the configs API package, you need to declare your dependency in your Package.swift:
 ```swift
-.package(url: "https://github.com/dankinsoid/swift-remote-configs.git", from: "1.0.0"),
+.package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.0"),
 ```
 and to your application/library target, add "SwiftConfigs" to your dependencies, e.g. like this:
 ```swift
 .target(name: "BestExampleApp", dependencies: [
-    .product(name: "SwiftConfigs", package: "swift-remote-configs")
+    .product(name: "SwiftConfigs", package: "swift-configs")
 ],
 ```
 </details>
@@ -40,12 +40,12 @@ public extension Configs.Keys {
 
 3. we need to create a Configs
 ```swift
-let remoteConfigs = Configs()
+let configs = Configs()
 ```
 
 4. we're now ready to use it
 ```swift
-let id = remoteConfigs.userID
+let id = configs.userID
 ```
 
 ## The core concepts
@@ -74,7 +74,7 @@ Where `value(for key: String)` is a function that returns a value for a given ke
 Instructing SwiftConfigs to use your configs backend as the one the whole application (including all libraries) should use is very simple:
 
 ```swift
-ConfigsSystem.bootstrap(MyRemoteConfigs())
+ConfigsSystem.bootstrap(Myconfigs())
 ```
 
 ## Installation
@@ -89,7 +89,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-remote-configs.git", from: "1.0.1")
+    .package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.1")
   ],
   targets: [
     .target(name: "SomeProject", dependencies: ["SwiftConfigs"])
@@ -99,21 +99,6 @@ let package = Package(
 ```ruby
 $ swift build
 ```
-
-## Migration Guide
-
-**To migrate to the new repository:**
-
-1. **Update Package.swift:**
-```diff
-dependencies: [
--    .package(url: "https://github.com/dankinsoid/swift-remote-configs.git", from: "1.0.0"),
-+    .package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.0"),
-]
-```
-
-2. **No code changes needed** - All APIs remain the same
-3. **Update any documentation** or references to use the new repository URL
 
 ## Implementations
 There are a few implementations of ConfigsHandler that you can use in your application:
@@ -126,4 +111,4 @@ dankinsoid, voidilov@gmail.com
 
 ## License
 
-swift-remote-configs is available under the MIT license. See the LICENSE file for more info.
+swift-configs is available under the MIT license. See the LICENSE file for more info.
