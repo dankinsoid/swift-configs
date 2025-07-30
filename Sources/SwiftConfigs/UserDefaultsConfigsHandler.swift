@@ -91,3 +91,15 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
 #if compiler(>=5.6)
     extension UserDefaultsConfigsHandler: @unchecked Sendable {}
 #endif
+
+extension ConfigsHandler where Self == UserDefaultsConfigsHandler {
+	/// Creates a UserDefaults configs handler
+	public static var userDefaults: UserDefaultsConfigsHandler {
+		UserDefaultsConfigsHandler()
+	}
+
+	/// Creates a UserDefaults configs handler with a specific suite
+	public static func userDefaults(suiteName: String) -> UserDefaultsConfigsHandler? {
+		UserDefaultsConfigsHandler(suiteName: suiteName)
+	}
+}

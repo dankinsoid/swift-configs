@@ -26,3 +26,11 @@ public struct NOOPConfigsHandler: ConfigsHandler {
         return nil
     }
 }
+
+extension ConfigsHandler where Self == NOOPConfigsHandler {
+
+	/// Returns a shared instance of the NOOP configs handler
+	public static var noop: NOOPConfigsHandler {
+		NOOPConfigsHandler.instance
+	}
+}

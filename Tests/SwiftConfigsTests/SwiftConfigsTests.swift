@@ -9,6 +9,7 @@ final class SwiftConfigsTests: XCTestCase {
         ("testListen", testListen),
         ("testDidFetch", testDidFetch),
         ("testFetchIfNeeded", testFetchIfNeeded),
+        ("testEnvironmentVariableHandler", testEnvironmentVariableHandler),
     ]
 
     var handler = InMemoryConfigsHandler()
@@ -87,6 +88,36 @@ final class SwiftConfigsTests: XCTestCase {
         // Assert
         XCTAssertEqual(value, "value")
     }
+    
+    func testEnvironmentVariableHandler() {
+        // Arrange
+        let mockProcessInfo = MockProcessInfo()
+        mockProcessInfo.environment = ["TEST_ENV_VAR": "test_value"]
+        let envHandler = EnvironmentVariableConfigsHandler(processInfo: mockProcessInfo)
+        
+        // Act
+        let value = envHandler.value(for: "TEST_ENV_VAR")
+        let nonExistentValue = envHandler.value(for: "NON_EXISTENT")
+        let allKeys = envHandler.allKeys()
+        
+        // Assert
+        XCTAssertEqual(value, "test_value")
+        XCTAssertNil(nonExistentValue)
+        XCTAssertTrue(allKeys?.contains("TEST_ENV_VAR") ?? false)
+        
+        // Test unsupported operations
+        XCTAssertThrowsError(try envHandler.writeValue("value", for: "key"))
+        XCTAssertThrowsError(try envHandler.clear())
+    }
+}
+
+private class MockProcessInfo: ProcessInfo {
+    override var environment: [String: String] {
+        get { _environment }
+        set { _environment = newValue }
+    }
+    
+    private var _environment: [String: String] = [:]
 }
 
 private extension Configs.Keys {

@@ -73,3 +73,17 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
         }
     }
 }
+
+extension ConfigsHandler where Self == InMemoryConfigsHandler {
+
+	/// Creates an in-memory configs handler
+	public static var inMemory: InMemoryConfigsHandler {
+		InMemoryConfigsHandler()
+	}
+	
+	/// Creates an in-memory configs handler with initial values
+	/// - Parameter values: Initial configuration values
+	public static func inMemory(_ values: [String: String]) -> InMemoryConfigsHandler {
+		InMemoryConfigsHandler(values)
+	}
+}

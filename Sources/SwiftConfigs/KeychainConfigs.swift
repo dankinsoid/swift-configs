@@ -290,4 +290,25 @@ import Foundation
 
 		private struct TimeoutError: Error {}
 	#endif
+
+extension ConfigsHandler where Self == KeychainConfigsHandler {
+
+	/// Creates a default Keychain configs handler
+	public static var keychain: KeychainConfigsHandler {
+		KeychainConfigsHandler.default
+	}
+	
+	/// Creates a Keychain configs handler with the specified service identifier
+	/// - Parameters:
+	///  - service: Optional service identifier for keychain items
+	///  - secClass: Security class for keychain items
+	///  - iCloudSync: Whether to enable iCloud Keychain synchronization
+	public static func keychain(
+		service: String? = nil,
+		class secClass: KeychainConfigsHandler.SecClass = .genericPassowrd,
+		iCloudSync: Bool = false
+	) -> KeychainConfigsHandler {
+		KeychainConfigsHandler(service: service, class: secClass, iCloudSync: iCloudSync)
+	}
+}
 #endif
