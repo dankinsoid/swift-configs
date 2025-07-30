@@ -2,6 +2,7 @@
 import XCTest
 
 final class SwiftConfigsTests: XCTestCase {
+
     static var allTests = [
         ("testReadDefaultValue", testReadDefaultValue),
         ("testReadValue", testReadValue),
@@ -16,7 +17,7 @@ final class SwiftConfigsTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-		ConfigsSystem.bootstrapInternal([.all: handler])
+		ConfigsSystem.bootstrapInternal([.default: handler])
     }
 
     func testReadDefaultValue() {

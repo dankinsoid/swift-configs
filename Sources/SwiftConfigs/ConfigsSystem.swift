@@ -7,7 +7,7 @@ public typealias RemoteConfigsSystem = ConfigsSystem
 /// configured. `ConfigsSystem` is set up just once in a given program to set up the desired configs backend
 /// implementation.
 public enum ConfigsSystem {
-    private static let _handler = HandlerBox([.all: NOOPConfigsHandler.instance])
+	private static let _handler = HandlerBox([.default: NOOPConfigsHandler.instance])
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
     /// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
@@ -16,7 +16,7 @@ public enum ConfigsSystem {
     /// - parameters:
     ///     - handler: The desired configs backend implementation.
     public static func bootstrap(_ handler: ConfigsHandler) {
-        bootstrap([.all: handler])
+		bootstrap([.default: handler])
     }
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
@@ -84,21 +84,21 @@ public enum ConfigsSystem {
 
         private let lock = ReadWriteLock()
         private var _didFetch = false
-        private let handlers: [(ConfigsCategory, ConfigsHandler)]
+		private let handlers: [ConfigsCategory: ConfigsHandler]
         private var observers: [UUID: () -> Void] = [:]
         private var didStartListen = false
         private var didStartFetch = false
         private var cancellation: ConfigsCancellation?
 
         init(_ handlers: [ConfigsCategory: ConfigsHandler]) {
-            self.handlers = handlers.sorted { $0.0 < $1.0 }
+            self.handlers = handlers
         }
 
         func fetch(completion: @escaping (Error?) -> Void) {
             lock.withWriterLock {
                 didStartFetch = true
             }
-            handler(for: .all).fetch { [weak self] error in
+            handler(for: nil).fetch { [weak self] error in
                 self?.lock.withWriterLock { () -> [() -> Void] in
                     self?.didStartFetch = false
                     if error == nil {
@@ -112,19 +112,19 @@ public enum ConfigsSystem {
             }
         }
 
-        public func value(for key: String, in category: ConfigsCategory = .default) -> String? {
+        public func value(for key: String, in category: ConfigsCategory? = nil) -> String? {
             handler(for: category).value(for: key)
         }
 
-        public func writeValue(_ value: String?, for key: String, in category: ConfigsCategory = .default) throws {
+        public func writeValue(_ value: String?, for key: String, in category: ConfigsCategory) throws {
             try handler(for: category).writeValue(value, for: key)
         }
 
-        public func allKeys(in category: ConfigsCategory = .default) -> Set<String> {
+        public func allKeys(in category: ConfigsCategory? = nil) -> Set<String> {
             handler(for: category).allKeys() ?? []
         }
 
-        public func clear(in category: ConfigsCategory = .default) throws {
+        public func clear(in category: ConfigsCategory? = nil) throws {
             try handler(for: category).clear()
         }
 
@@ -143,7 +143,7 @@ public enum ConfigsSystem {
                 observers[id] = observer
                 if !didStartListen {
                     didStartListen = true
-                    cancellation = handler(for: .all).listen { [weak self] in
+                    cancellation = handler(for: nil).listen { [weak self] in
                         self?.lock.withReaderLock {
                             self?.observers ?? [:]
                         }
@@ -155,9 +155,9 @@ public enum ConfigsSystem {
             return ConfigsCancellation { self.cancel(id: id) }
         }
 
-        private func handler(for category: ConfigsCategory) -> ConfigsHandler {
+        private func handler(for category: ConfigsCategory?) -> ConfigsHandler {
             MultiplexConfigsHandler(
-                handlers: handlers.compactMap { category.isSuperset(of: $0.0) ? $0.1 : nil }
+				handlers: category.map { category in handlers.compactMap { category == $0.key ? $0.value : nil } } ?? Array(handlers.values)
             )
         }
 

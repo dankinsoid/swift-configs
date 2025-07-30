@@ -40,10 +40,15 @@ public struct Configs {
         nonmutating set {
             let key = Keys()[keyPath: keyPath]
             if let value = key.encode(newValue) {
-                try? handler.writeValue(value, for: key.name, in: key.writeCategory ?? key.readCategory)
+                try? handler.writeValue(value, for: key.name, in: key.writeCategory)
             }
         }
     }
+
+	public func remove<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) throws {
+		let key = Keys()[keyPath: keyPath]
+		try handler.writeValue(nil, for: key.name, in: key.writeCategory)
+	}
 
     public var didFetch: Bool { handler.didFetch }
 
@@ -72,13 +77,13 @@ public struct Configs {
 
         public struct Key<Value>: ConfigKey {
             public let name: String
-            public let readCategory: ConfigsCategory
+            public let readCategory: ConfigsCategory?
             public let defaultValue: () -> Value
             public let decode: (String) -> Value?
 
             public init(
                 _ key: String,
-                from readCategory: ConfigsCategory = .default,
+                from readCategory: ConfigsCategory? = nil,
                 decode: @escaping (String) -> Value?,
                 default defaultValue: @escaping @autoclosure () -> Value
             ) {
@@ -91,16 +96,16 @@ public struct Configs {
 
         public struct WritableKey<Value>: WritableConfigKey {
             public let name: String
-            public let readCategory: ConfigsCategory
-            public let writeCategory: ConfigsCategory?
+            public let readCategory: ConfigsCategory?
+            public let writeCategory: ConfigsCategory
             public let defaultValue: () -> Value
             public let decode: (String) -> Value?
             public let encode: (Value) -> String?
 
             public init(
                 _ key: String,
-                from readCategory: ConfigsCategory = .default,
-                to writeCategory: ConfigsCategory? = nil,
+                from readCategory: ConfigsCategory? = nil,
+				to writeCategory: ConfigsCategory = .default,
                 decode: @escaping (String) -> Value?,
                 encode: @escaping (Value) -> String?,
                 default defaultValue: @escaping @autoclosure () -> Value
@@ -119,13 +124,13 @@ public struct Configs {
 public protocol ConfigKey<Value> {
     associatedtype Value
     var name: String { get }
-    var readCategory: ConfigsCategory { get }
+    var readCategory: ConfigsCategory? { get }
     var defaultValue: () -> Value { get }
     var decode: (String) -> Value? { get }
 }
 
 public protocol WritableConfigKey<Value>: ConfigKey {
-    var writeCategory: ConfigsCategory? { get }
+    var writeCategory: ConfigsCategory { get }
     var encode: (Value) -> String? { get }
 }
 
@@ -174,7 +179,7 @@ public extension Configs.Keys.Key where Value: LosslessStringConvertible {
     ///   - default: The default value to use if the key is not found.
     init(
         _ key: String,
-        from readCategory: ConfigsCategory = .default,
+		from readCategory: ConfigsCategory? = nil,
         default defaultValue: Value
     ) {
         self.init(key, from: readCategory, decode: Value.init, default: defaultValue)
@@ -189,7 +194,7 @@ public extension Configs.Keys.Key where Value: RawRepresentable, Value.RawValue 
     ///   - default: The default value to use if the key is not found.
     init(
         _ key: String,
-        from readCategory: ConfigsCategory = .default,
+		from readCategory: ConfigsCategory? = nil,
         default defaultValue: Value
     ) {
         self.init(key, from: readCategory, decode: Value.init, default: defaultValue)
@@ -204,8 +209,8 @@ public extension Configs.Keys.WritableKey where Value: LosslessStringConvertible
     ///   - default: The default value to use if the key is not found.
     init(
         _ key: String,
-        from readCategory: ConfigsCategory = .default,
-        to writeCategory: ConfigsCategory? = nil,
+		from readCategory: ConfigsCategory? = nil,
+		to writeCategory: ConfigsCategory = .default,
         default defaultValue: Value
     ) {
         self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.description, default: defaultValue)
@@ -220,8 +225,8 @@ public extension Configs.Keys.WritableKey where Value: RawRepresentable, Value.R
     ///   - default: The default value to use if the key is not found.
     init(
         _ key: String,
-        from readCategory: ConfigsCategory = .default,
-        to writeCategory: ConfigsCategory? = nil,
+        from readCategory: ConfigsCategory? = nil,
+		to writeCategory: ConfigsCategory = .default,
         default defaultValue: Value
     ) {
         self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.rawValue, default: defaultValue)
@@ -238,7 +243,7 @@ public extension Configs.Keys.Key where Value: Decodable {
     @_disfavoredOverload
     init(
         _ key: String,
-        from readCategory: ConfigsCategory = .default,
+        from readCategory: ConfigsCategory? = nil,
         default defaultValue: Value,
         decoder: JSONDecoder = JSONDecoder()
     ) {
@@ -262,8 +267,8 @@ public extension Configs.Keys.WritableKey where Value: Codable {
     init(
         _ key: String,
         default defaultValue: Value,
-        from readCategory: ConfigsCategory = .default,
-        to writeCategory: ConfigsCategory? = nil,
+		from readCategory: ConfigsCategory? = nil,
+		to writeCategory: ConfigsCategory = .default,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
     ) {
