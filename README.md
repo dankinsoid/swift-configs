@@ -53,13 +53,13 @@ ConfigsSystem.bootstrap(
 ### Available Handlers
 SwiftConfigs provides several built-in configuration handlers:
 
-- **`.userDefaults`** - Stores configurations in UserDefaults (local, insecure)
-- **`.keychain`** - Stores configurations in Keychain (local, secure)
-- **`.keychain(iCloudSync: true)`** - Stores configurations in Keychain with iCloud sync (remote, secure)
+- **`.userDefaults`** - Stores configurations in UserDefaults
+- **`.keychain`** - Stores configurations in Keychain
+- **`.keychain(iCloudSync: true)`** - Stores configurations in Keychain with iCloud sync
 - **`.environment`** - Reads configurations from environment variables (read-only)
-- **`.ubiquitous`** - Stores configurations in iCloud key-value store (remote, Apple platforms only)
-- **`.inMemory`** - Stores configurations in memory (for testing)
-- **`.noop`** - No-operation handler (for testing)
+- **`.ubiquitous`** - Stores configurations in iCloud key-value store (Apple platforms only)
+- **`.inMemory`** - Stores configurations in memory
+- **`.noop`** - No-operation handler
 - **`.multiple(...)`** - Combines multiple handlers for different categories
 - **`.fallback(read:write:)`** - Reads from one handler with fallback to another, writes to one handler only
 
