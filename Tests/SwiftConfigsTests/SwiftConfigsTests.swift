@@ -11,6 +11,7 @@ final class SwiftConfigsTests: XCTestCase {
         ("testDidFetch", testDidFetch),
         ("testFetchIfNeeded", testFetchIfNeeded),
         ("testEnvironmentVariableHandler", testEnvironmentVariableHandler),
+        ("testFallbackConfigsHandler", testFallbackConfigsHandler),
     ]
 
     var handler = InMemoryConfigsHandler()
@@ -109,6 +110,37 @@ final class SwiftConfigsTests: XCTestCase {
         // Test unsupported operations
         XCTAssertThrowsError(try envHandler.writeValue("value", for: "key"))
         XCTAssertThrowsError(try envHandler.clear())
+    }
+    
+    func testFallbackConfigsHandler() {
+        // Arrange
+        let readHandler = InMemoryConfigsHandler(["remote_key": "remote_value"])
+        let writeHandler = InMemoryConfigsHandler(["local_key": "local_value"])
+        let fallbackHandler = FallbackConfigsHandler(readHandler: readHandler, writeHandler: writeHandler)
+        
+        // Test reading from read handler first
+        XCTAssertEqual(fallbackHandler.value(for: "remote_key"), "remote_value")
+        
+        // Test fallback to write handler
+        XCTAssertEqual(fallbackHandler.value(for: "local_key"), "local_value")
+        
+        // Test non-existent key
+        XCTAssertNil(fallbackHandler.value(for: "non_existent"))
+        
+        // Test writing (should only write to write handler)
+        try? fallbackHandler.writeValue("new_value", for: "test_key")
+        XCTAssertEqual(writeHandler.value(for: "test_key"), "new_value")
+        XCTAssertNil(readHandler.value(for: "test_key"))
+        
+        // Test allKeys combines both handlers
+        let allKeys = fallbackHandler.allKeys()
+        XCTAssertTrue(allKeys?.contains("remote_key") ?? false)
+        XCTAssertTrue(allKeys?.contains("local_key") ?? false)
+        
+        // Test clear only affects write handler
+        try? fallbackHandler.clear()
+        XCTAssertNil(writeHandler.value(for: "local_key"))
+        XCTAssertEqual(readHandler.value(for: "remote_key"), "remote_value")
     }
 }
 

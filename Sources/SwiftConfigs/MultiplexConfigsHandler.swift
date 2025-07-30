@@ -118,15 +118,14 @@ private final class MultiplexCompletion {
     }
 }
 
-extension ConfigsHandler where Self == MultiplexConfigsHandler {
+public extension ConfigsHandler where Self == MultiplexConfigsHandler {
+    /// Creates a multiplex configs handler with an array of handlers
+    static func multiple(_ handlers: [ConfigsHandler]) -> MultiplexConfigsHandler {
+        MultiplexConfigsHandler(handlers: handlers)
+    }
 
-	/// Creates a multiplex configs handler with an array of handlers
-	public static func multiplex(_ handlers: [ConfigsHandler]) -> MultiplexConfigsHandler {
-		MultiplexConfigsHandler(handlers: handlers)
-	}
-
-	/// Creates a multiplex configs handler with variadic handlers
-	public static func multiplex(_ handlers: ConfigsHandler...) -> MultiplexConfigsHandler {
-		MultiplexConfigsHandler(handlers: handlers)
-	}
+    /// Creates a multiplex configs handler with variadic handlers
+    static func multiple(_ handlers: ConfigsHandler...) -> MultiplexConfigsHandler {
+        MultiplexConfigsHandler(handlers: handlers)
+    }
 }

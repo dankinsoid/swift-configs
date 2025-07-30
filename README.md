@@ -14,7 +14,7 @@ import SwiftConfigs
 2. let's define a key
 ```swift
 public extension Configs.Keys {
-    var showAd: Key<UUID> { Key("show-ad", default: false) }
+    var showAd: Key<Bool> { Key("show-ad", default: false) }
 }
 ```
 
@@ -25,13 +25,88 @@ let configs = Configs()
 
 4. we're now ready to use it
 ```swift
-let id = configs.userID
+let shouldShowAd = configs.showAd
 ```
 
 ## The core concepts
 
 ### Configs
 `Configs` are used to read configs and therefore the most important type in SwiftConfigs, so their use should be as simple as possible.
+
+### Categories
+Categories allow you to save different keys in different storages without direct access to the handler. This enables you to organize your configuration data by security level, persistence requirements, or other criteria.
+
+You can bootstrap SwiftConfigs with different handlers for different categories:
+
+```swift
+ConfigsSystem.bootstrap(
+    [
+        .secure: .keychain,
+        .secureRemote: .keychain(iCloudSync: true),
+        .environment: .environment,
+        .default: .userDefaults,
+        .remote: .ubiquitous,
+    ]
+)
+```
+
+### Available Handlers
+SwiftConfigs provides several built-in configuration handlers:
+
+- **`.userDefaults`** - Stores configurations in UserDefaults (local, insecure)
+- **`.keychain`** - Stores configurations in Keychain (local, secure)
+- **`.keychain(iCloudSync: true)`** - Stores configurations in Keychain with iCloud sync (remote, secure)
+- **`.environment`** - Reads configurations from environment variables (read-only)
+- **`.ubiquitous`** - Stores configurations in iCloud key-value store (remote, Apple platforms only)
+- **`.inMemory`** - Stores configurations in memory (for testing)
+- **`.noop`** - No-operation handler (for testing)
+- **`.multiple(...)`** - Combines multiple handlers for different categories
+
+#### Defining Keys with Categories
+
+You can define keys that automatically use specific categories by specifying the `from` parameter:
+
+```swift
+public extension Configs.Keys {
+    // Uses .default category (UserDefaults)
+    var showAds: Key<Bool> { Key("show-ads", default: false) }
+    
+    // Uses .secure category (Keychain)
+    var apiToken: Key<String> { Key("api-token", from: .secure, default: "") }
+    
+    // Uses .environment category (Environment Variables)
+    var serverURL: Key<String> { Key("SERVER_URL", from: .environment, default: "https://api.example.com") }
+    
+    // Uses .remote category (iCloud key-value store)
+    var userPreferences: Key<UserPreferences> { Key("user-preferences", from: .remote, default: []) }
+    
+    // Writable key with different read/write categories
+    var userSetting: WritableKey<[Setting]> { 
+        WritableKey("user-setting", from: .remote, to: .remote, default: []) 
+    }
+}
+```
+
+When you access these keys, they automatically use the appropriate storage:
+
+```swift
+let configs = Configs()
+
+// Reads from UserDefaults
+let showAds = configs.showAds
+
+// Reads from Keychain
+let token = configs.apiToken
+
+// Reads from environment variables
+let serverURL = configs.serverURL
+
+// Reads from iCloud key-value store
+let preferences = configs.userPreferences
+
+// Can read from remote, write to local
+configs.userSetting = "new value"
+```
 
 ## On the implementation of a configs backend (a ConfigsHandler)
 Note: If you don't want to implement a custom configs backend, everything in this section is probably not very relevant, so please feel free to skip.
@@ -43,7 +118,16 @@ To become a compatible configs backend that all SwiftConfigs consumers can use, 
 Instructing SwiftConfigs to use your configs backend as the one the whole application (including all libraries) should use is very simple:
 
 ```swift
-ConfigsSystem.bootstrap(Myconfigs())
+ConfigsSystem.bootstrap(MyConfigs())
+```
+
+Or with categories:
+
+```swift
+ConfigsSystem.bootstrap([
+    .default: .userDefaults,
+    .secure: MySecureConfigs()
+])
 ```
 
 ## Installation
