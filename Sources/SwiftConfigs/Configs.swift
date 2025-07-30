@@ -16,34 +16,41 @@ public struct Configs {
     }
 
     public subscript<Key: ConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
-        let key = Keys()[keyPath: keyPath]
-        if let overwrittenValue = values[key.name] as? Key.Value {
-            return overwrittenValue
-        }
-        if let value = handler.value(for: key.name, in: key.readCategory) {
-            return (value as? Key.Value) ?? key.decode(value.description) ?? key.defaultValue()
-        }
-        return key.defaultValue()
+		get {
+			get(keyPath)
+		}
     }
 
     public subscript<Key: WritableConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
         get {
-            let key = Keys()[keyPath: keyPath]
-            if let overwrittenValue = values[key.name] as? Key.Value {
-                return overwrittenValue
-            }
-            if let value = handler.value(for: key.name, in: key.readCategory) {
-                return (value as? Key.Value) ?? key.decode(value.description) ?? key.defaultValue()
-            }
-            return key.defaultValue()
+			get(keyPath)
         }
         nonmutating set {
-            let key = Keys()[keyPath: keyPath]
-            if let value = key.encode(newValue) {
-                try? handler.writeValue(value, for: key.name, in: key.writeCategory)
-            }
+           set(keyPath, newValue)
         }
     }
+
+	public func get<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
+		let key = Keys()[keyPath: keyPath]
+		if let overwrittenValue = values[key.name] as? Key.Value {
+			return overwrittenValue
+		}
+		if let value = handler.value(for: key.name, in: key.readCategory), let decoded = (value as? Key.Value) ?? key.decode(value.description) {
+			return decoded
+		}
+		let result = key.defaultValue()
+		if let writable = key as? Keys.WritableKey<Key.Value>, writable.cacheDefaultValue, let value = writable.encode(result) {
+			try? handler.writeValue(value, for: key.name, in: writable.writeCategory)
+		}
+		return result
+	}
+
+	public func set<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>, _ newValue: Key.Value) {
+		let key = Keys()[keyPath: keyPath]
+		if let value = key.encode(newValue) {
+			try? handler.writeValue(value, for: key.name, in: key.writeCategory)
+		}
+	}
 
 	public func remove<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) throws {
 		let key = Keys()[keyPath: keyPath]
@@ -73,6 +80,7 @@ public struct Configs {
     }
 
     public struct Keys {
+
         public init() {}
 
         public struct Key<Value>: ConfigKey {
@@ -96,6 +104,7 @@ public struct Configs {
 
         public struct WritableKey<Value>: WritableConfigKey {
             public let name: String
+			public let cacheDefaultValue: Bool
             public let readCategory: ConfigsCategory?
             public let writeCategory: ConfigsCategory
             public let defaultValue: () -> Value
@@ -108,7 +117,8 @@ public struct Configs {
 				to writeCategory: ConfigsCategory = .default,
                 decode: @escaping (String) -> Value?,
                 encode: @escaping (Value) -> String?,
-                default defaultValue: @escaping @autoclosure () -> Value
+                default defaultValue: @escaping @autoclosure () -> Value,
+				cacheDefaultValue: Bool = true
             ) {
                 name = key
                 self.readCategory = readCategory
@@ -116,6 +126,7 @@ public struct Configs {
                 self.decode = decode
                 self.encode = encode
                 self.defaultValue = defaultValue
+				self.cacheDefaultValue = cacheDefaultValue
             }
         }
     }
@@ -135,6 +146,7 @@ public protocol WritableConfigKey<Value>: ConfigKey {
 }
 
 public extension Configs {
+
     /// Overwrites the value of a key.
     /// - Parameters:
     ///   - key: The key to overwrite.
@@ -180,9 +192,9 @@ public extension Configs.Keys.Key where Value: LosslessStringConvertible {
     init(
         _ key: String,
 		from readCategory: ConfigsCategory? = nil,
-        default defaultValue: Value
+        default defaultValue: @escaping @autoclosure () -> Value
     ) {
-        self.init(key, from: readCategory, decode: Value.init, default: defaultValue)
+        self.init(key, from: readCategory, decode: Value.init, default: defaultValue())
     }
 }
 
@@ -195,9 +207,9 @@ public extension Configs.Keys.Key where Value: RawRepresentable, Value.RawValue 
     init(
         _ key: String,
 		from readCategory: ConfigsCategory? = nil,
-        default defaultValue: Value
+        default defaultValue: @escaping @autoclosure () -> Value
     ) {
-        self.init(key, from: readCategory, decode: Value.init, default: defaultValue)
+        self.init(key, from: readCategory, decode: Value.init, default: defaultValue())
     }
 }
 
@@ -211,9 +223,10 @@ public extension Configs.Keys.WritableKey where Value: LosslessStringConvertible
         _ key: String,
 		from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
-        default defaultValue: Value
+        default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = true
     ) {
-        self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.description, default: defaultValue)
+		self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.description, default: defaultValue(), cacheDefaultValue: cacheDefaultValue)
     }
 }
 
@@ -227,9 +240,10 @@ public extension Configs.Keys.WritableKey where Value: RawRepresentable, Value.R
         _ key: String,
         from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
-        default defaultValue: Value
+        default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = true
     ) {
-        self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.rawValue, default: defaultValue)
+		self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.rawValue, default: defaultValue(), cacheDefaultValue: cacheDefaultValue)
     }
 }
 
@@ -244,14 +258,14 @@ public extension Configs.Keys.Key where Value: Decodable {
     init(
         _ key: String,
         from readCategory: ConfigsCategory? = nil,
-        default defaultValue: Value,
+        default defaultValue: @escaping @autoclosure () -> Value,
         decoder: JSONDecoder = JSONDecoder()
     ) {
         self.init(
             key,
             from: readCategory,
             decode: { $0.data(using: .utf8).flatMap { try? decoder.decode(Value.self, from: $0) } },
-            default: defaultValue
+            default: defaultValue()
         )
     }
 }
@@ -266,9 +280,10 @@ public extension Configs.Keys.WritableKey where Value: Codable {
     @_disfavoredOverload
     init(
         _ key: String,
-        default defaultValue: Value,
 		from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = true,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
     ) {
@@ -278,7 +293,8 @@ public extension Configs.Keys.WritableKey where Value: Codable {
             to: writeCategory,
             decode: { $0.data(using: .utf8).flatMap { try? decoder.decode(Value.self, from: $0) } },
             encode: { try? String(data: encoder.encode($0), encoding: .utf8) },
-            default: defaultValue
+            default: defaultValue(),
+			cacheDefaultValue: cacheDefaultValue
         )
     }
 }
