@@ -60,6 +60,7 @@ public struct Configs {
         }
     }
 
+	@discardableResult
     public func listen(_ listener: @escaping (Configs) -> Void) -> ConfigsCancellation {
         handler.listen {
             listener(self)

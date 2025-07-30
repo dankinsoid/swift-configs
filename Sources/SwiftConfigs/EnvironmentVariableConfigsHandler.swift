@@ -2,10 +2,9 @@ import Foundation
 
 /// A ConfigsHandler implementation backed by environment variables
 public final class EnvironmentVariableConfigsHandler: ConfigsHandler {
+
     private let processInfo: ProcessInfo
-    private var observers: [UUID: () -> Void] = [:]
-    private let lock = ReadWriteLock()
-    
+
     /// Creates an environment variable configs handler
     /// - Parameter processInfo: The ProcessInfo instance to use (defaults to ProcessInfo.processInfo)
     public init(processInfo: ProcessInfo = ProcessInfo.processInfo) {
@@ -20,16 +19,7 @@ public final class EnvironmentVariableConfigsHandler: ConfigsHandler {
     }
     
     public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
-        let id = UUID()
-        lock.withWriterLockVoid {
-            observers[id] = listener
-        }
-        
-        return ConfigsCancellation { [weak self] in
-            self?.lock.withWriterLockVoid {
-                self?.observers.removeValue(forKey: id)
-            }
-        }
+        return nil
     }
     
     public func value(for key: String) -> String? {
@@ -56,7 +46,3 @@ extension ConfigsHandler where Self == EnvironmentVariableConfigsHandler {
 		EnvironmentVariableConfigsHandler()
 	}
 }
-
-#if compiler(>=5.6)
-    extension EnvironmentVariableConfigsHandler: @unchecked Sendable {}
-#endif

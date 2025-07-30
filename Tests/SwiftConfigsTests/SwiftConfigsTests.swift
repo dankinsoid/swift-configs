@@ -16,7 +16,7 @@ final class SwiftConfigsTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        ConfigsSystem.bootstrapInternal(handler)
+		ConfigsSystem.bootstrapInternal([.all: handler])
     }
 
     func testReadDefaultValue() {
@@ -111,7 +111,8 @@ final class SwiftConfigsTests: XCTestCase {
     }
 }
 
-private class MockProcessInfo: ProcessInfo {
+private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
+
     override var environment: [String: String] {
         get { _environment }
         set { _environment = newValue }
