@@ -6,6 +6,8 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
     private var observers: [UUID: () -> Void] = [:]
     private let lock = ReadWriteLock()
     private var notificationObserver: NSObjectProtocol?
+	
+	public static let standard = UserDefaultsConfigsHandler()
 
     /// Creates a UserDefaults configs handler
     /// - Parameter userDefaults: The UserDefaults instance to use
@@ -95,7 +97,7 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
 extension ConfigsHandler where Self == UserDefaultsConfigsHandler {
 	/// Creates a UserDefaults configs handler
 	public static var userDefaults: UserDefaultsConfigsHandler {
-		UserDefaultsConfigsHandler()
+		.standard
 	}
 
 	/// Creates a UserDefaults configs handler with a specific suite

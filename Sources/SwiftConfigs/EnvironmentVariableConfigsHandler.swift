@@ -1,7 +1,7 @@
 import Foundation
 
 /// A ConfigsHandler implementation backed by environment variables
-public final class EnvironmentVariableConfigsHandler: ConfigsHandler {
+public struct EnvironmentVariableConfigsHandler: ConfigsHandler {
 
     private let processInfo: ProcessInfo
 
