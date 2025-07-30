@@ -61,6 +61,7 @@ SwiftConfigs provides several built-in configuration handlers:
 - **`.inMemory`** - Stores configurations in memory (for testing)
 - **`.noop`** - No-operation handler (for testing)
 - **`.multiple(...)`** - Combines multiple handlers for different categories
+- **`.fallback(read:write:)`** - Reads from one handler with fallback to another, writes to one handler only
 
 #### Defining Keys with Categories
 
