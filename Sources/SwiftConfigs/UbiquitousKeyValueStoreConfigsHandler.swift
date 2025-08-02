@@ -104,6 +104,7 @@
         extension UbiquitousKeyValueStoreConfigsHandler: @unchecked Sendable {}
     #endif
 
+    @available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *)
     public extension ConfigsHandler where Self == UbiquitousKeyValueStoreConfigsHandler {
         /// Creates a default iCloud key-value store configs handler
         static var ubiquitous: UbiquitousKeyValueStoreConfigsHandler {

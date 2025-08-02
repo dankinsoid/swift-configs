@@ -18,7 +18,7 @@ final class SwiftConfigsTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-		ConfigsSystem.bootstrapInternal([.default: handler])
+		ConfigsSystem.bootstrap([.default: handler])
     }
 
     func testReadDefaultValue() {

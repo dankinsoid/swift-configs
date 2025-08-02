@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(Security)
-import Security
+    import Security
 #endif
 
 @available(*, deprecated, renamed: "ConfigsSystem")
@@ -10,30 +10,17 @@ public typealias RemoteConfigsSystem = ConfigsSystem
 /// configured. `ConfigsSystem` is set up just once in a given program to set up the desired configs backend
 /// implementation.
 public enum ConfigsSystem {
+    /// The default configs backend categories.
+    public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
+        [
+            .default: .userDefaults,
+            .environment: .environment,
+            .memory: .inMemory,
+        ]
+        .withPlatformSpecific
+    }
 
-#if canImport(Security)
-	public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
-		[
-			.default: .userDefaults,
-			.environment: .environment,
-			.secure: .keychain,
-			.secureSynced: .keychain(iCloudSync: true),
-			.synced: .ubiquitous,
-			.memory: .inMemory
-		]
-	}
-#else
-	public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
-		[
-			.default: .userDefaults,
-			.environment: .environment,
-			.synced: .ubiquitous,
-			.memory: .inMemory
-		]
-	}
-#endif
-
-	private static let _handler = HandlerBox(defaultHandlers)
+    private static let _handler = HandlerBox(defaultHandlers)
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
     /// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
@@ -42,7 +29,7 @@ public enum ConfigsSystem {
     /// - parameters:
     ///     - handler: The desired configs backend implementation.
     public static func bootstrap(_ handler: ConfigsHandler) {
-		bootstrap([.default: handler])
+        bootstrap([.default: handler])
     }
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
@@ -52,12 +39,7 @@ public enum ConfigsSystem {
     /// - parameters:
     ///     - handler: The desired configs backend implementation.
     public static func bootstrap(_ handlers: [ConfigsCategory: ConfigsHandler]) {
-        _handler.replaceHandler(handlers, validate: true)
-    }
-
-    /// for our testing we want to allow multiple bootstrapping
-    static func bootstrapInternal(_ handlers: [ConfigsCategory: ConfigsHandler]) {
-        _handler.replaceHandler(handlers, validate: false)
+        _handler.replaceHandler(handlers)
     }
 
     /// Returns a reference to the configured handler.
@@ -82,7 +64,7 @@ public enum ConfigsSystem {
             handler = Handler(underlying)
         }
 
-        func replaceHandler(_ factory: [ConfigsCategory: ConfigsHandler], validate: Bool) {
+        func replaceHandler(_ factory: [ConfigsCategory: ConfigsHandler]) {
             withWriterLock {
                 self.handler = Handler(factory)
                 self.initialized = true
@@ -109,7 +91,7 @@ public enum ConfigsSystem {
 
         private let lock = ReadWriteLock()
         private var _didFetch = false
-		public let handlers: [ConfigsCategory: ConfigsHandler]
+        public let handlers: [ConfigsCategory: ConfigsHandler]
         private var observers: [UUID: () -> Void] = [:]
         private var didStartListen = false
         private var didStartFetch = false
@@ -182,7 +164,7 @@ public enum ConfigsSystem {
 
         private func handler(for category: ConfigsCategory?) -> ConfigsHandler {
             MultiplexConfigsHandler(
-				handlers: category.map { category in handlers.compactMap { category == $0.key ? $0.value : nil } } ?? Array(handlers.values)
+                handlers: category.map { category in handlers.compactMap { category == $0.key ? $0.value : nil } } ?? Array(handlers.values)
             )
         }
 
@@ -206,3 +188,17 @@ public enum ConfigsSystem {
 #if compiler(>=5.6)
     extension ConfigsSystem: Sendable {}
 #endif
+
+private extension [ConfigsCategory: ConfigsHandler] {
+    var withPlatformSpecific: [ConfigsCategory: ConfigsHandler] {
+        var handlers = self
+        if #available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *) {
+            handlers[.synced] = .ubiquitous
+        }
+        #if canImport(Security)
+            handlers[.secure] = .keychain
+            handlers[.secureSynced] = .keychain(iCloudSync: true)
+        #endif
+        return handlers
+    }
+}
