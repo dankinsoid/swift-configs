@@ -42,6 +42,18 @@ public enum ConfigsSystem {
         _handler.replaceHandler(handlers)
     }
 
+    /// `defaultBootstrap` is an one-time configuration function which globally selects the desired configs backend
+    /// implementation. `defaultBootstrap` uses the default handlers and merges them with the provided handlers.
+    /// `defaultBootstrap` can be called at maximum once in any given program, calling it more than once will
+    /// lead to undefined behaviour, most likely a crash.
+    ///
+    ///
+    /// - parameters:
+    ///     - handler: The desired configs backend implementation.
+    public static func defaultBootstrap(_ handlers: [ConfigsCategory: ConfigsHandler]) {
+        _handler.replaceHandler(handlers.merging(defaultHandlers) { new, _ in new })
+    }
+
     /// Returns a reference to the configured handler.
     static var handler: Handler {
         _handler.underlying
