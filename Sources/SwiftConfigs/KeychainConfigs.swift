@@ -95,10 +95,6 @@ import Foundation
 			]
 			configureAccess(query: &query)
 
-			if let service {
-				query[kSecAttrService as String] = service
-			}
-
 			// Try to delete the old value if it exists
 			SecItemDelete(query as CFDictionary)
 
@@ -128,10 +124,6 @@ import Foundation
 				kSecClass as String: secClass.rawValue,
 			]
 			configureAccess(query: &query)
-
-			if let service {
-				query[kSecAttrService as String] = service
-			}
 
 			var status = SecItemDelete(query as CFDictionary)
 			if status == errSecInteractionNotAllowed {
@@ -191,10 +183,7 @@ import Foundation
 				kSecMatchLimit as String: kSecMatchLimitOne,
 			]
 			configureAccess(query: &query)
-			if let service {
-				query[kSecAttrService as String] = service
-			}
-
+			
 			var item: CFTypeRef?
 			let status = SecItemCopyMatching(query as CFDictionary, &item)
 			return (query, item, status)
@@ -223,6 +212,10 @@ import Foundation
 
 			if iCloudSync {
 				query[kSecAttrSynchronizable as String] = kCFBooleanTrue
+			}
+
+			if let service {
+				query[kSecAttrService as String] = service
 			}
 
 			#if os(macOS)

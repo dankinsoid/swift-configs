@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Security)
+import Security
+#endif
 
 @available(*, deprecated, renamed: "ConfigsSystem")
 public typealias RemoteConfigsSystem = ConfigsSystem
@@ -7,7 +10,30 @@ public typealias RemoteConfigsSystem = ConfigsSystem
 /// configured. `ConfigsSystem` is set up just once in a given program to set up the desired configs backend
 /// implementation.
 public enum ConfigsSystem {
-	private static let _handler = HandlerBox([.default: NOOPConfigsHandler.instance])
+
+#if canImport(Security)
+	public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
+		[
+			.default: .userDefaults,
+			.environment: .environment,
+			.secure: .keychain,
+			.secureRemote: .keychain(iCloudSync: true),
+			.remote: .ubiquitous,
+			.memory: .inMemory
+		]
+	}
+#else
+	public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
+		[
+			.default: .userDefaults,
+			.environment: .environment,
+			.remote: .ubiquitous,
+			.memory: .inMemory
+		]
+	}
+#endif
+
+	private static let _handler = HandlerBox(defaultHandlers)
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
     /// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
@@ -58,7 +84,6 @@ public enum ConfigsSystem {
 
         func replaceHandler(_ factory: [ConfigsCategory: ConfigsHandler], validate: Bool) {
             withWriterLock {
-                precondition(!validate || !self.initialized, "configs system can only be initialized once per process.")
                 self.handler = Handler(factory)
                 self.initialized = true
             }

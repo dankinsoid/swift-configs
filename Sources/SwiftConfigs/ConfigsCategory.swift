@@ -12,6 +12,7 @@ public struct ConfigsCategory: Hashable {
     public static let remote = ConfigsCategory()
 	public static let secureRemote = ConfigsCategory()
 	public static let environment = ConfigsCategory()
+	public static let memory = ConfigsCategory()
 }
 
 #if compiler(>=5.6)
