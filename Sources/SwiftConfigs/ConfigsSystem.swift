@@ -20,7 +20,19 @@ public enum ConfigsSystem {
         .withPlatformSpecific
     }
 
-    private static let _handler = HandlerBox(defaultHandlers)
+    private static let _handler = HandlerBox(
+        isPreview
+            ? [
+                .default: .inMemory,
+                .environment: .inMemory,
+                .memory: .inMemory,
+                .secure: .inMemory,
+                .secureSynced: .inMemory,
+                .synced: .inMemory,
+                .remote: .inMemory
+            ]
+            : defaultHandlers
+    )
 
     /// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
     /// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
@@ -214,3 +226,9 @@ private extension [ConfigsCategory: ConfigsHandler] {
         return handlers
     }
 }
+
+#if DEBUG
+    private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || ProcessInfo.processInfo.processName == "XCPreviewAgent"
+#else
+    private let isPreview = false
+#endif
