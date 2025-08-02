@@ -16,7 +16,7 @@ public struct Configs {
 	}
 
 	public subscript<Key: ConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
-		get(keyPath)
+		self.get(keyPath)
 	}
 
 	public subscript<Key: WritableConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
@@ -513,15 +513,17 @@ public extension Configs.Keys.WritableKey where Value: Codable {
 		in category: ConfigsCategory,
 		default defaultValue: @escaping @autoclosure () -> Value,
 		cacheDefaultValue: Bool = false,
-		decoder _: JSONDecoder = JSONDecoder(),
-		encoder _: JSONEncoder = JSONEncoder()
+		decoder: JSONDecoder = JSONDecoder(),
+		encoder: JSONEncoder = JSONEncoder()
 	) {
 		self.init(
 			key,
 			from: category,
 			to: category,
 			default: defaultValue(),
-			cacheDefaultValue: cacheDefaultValue
+			cacheDefaultValue: cacheDefaultValue,
+			decoder: decoder,
+			encoder: encoder
 		)
 	}
 }
