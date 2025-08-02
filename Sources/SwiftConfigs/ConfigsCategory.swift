@@ -1,19 +1,21 @@
 import Foundation
 
-public struct ConfigsCategory: Hashable {
+public struct ConfigsCategory: Hashable, CustomStringConvertible {
 
-	private let id = UUID()
+	private let uuid = UUID()
+	public let description: String
 
-    public init() {
+	public init(_ name: String) {
+		self.description = name
     }
 
-    public static let `default` = ConfigsCategory()
-    public static let secure = ConfigsCategory()
-    public static let remote = ConfigsCategory()
-	public static let secureSynced = ConfigsCategory()
-	public static let synced = ConfigsCategory()
-	public static let environment = ConfigsCategory()
-	public static let memory = ConfigsCategory()
+    public static let `default` = ConfigsCategory("Default")
+    public static let secure = ConfigsCategory("Secure")
+    public static let remote = ConfigsCategory("Remote")
+	public static let secureSynced = ConfigsCategory("Secure Synced")
+	public static let synced = ConfigsCategory("Synced")
+	public static let environment = ConfigsCategory("Environments")
+	public static let memory = ConfigsCategory("In Memory")
 }
 
 #if compiler(>=5.6)
