@@ -42,10 +42,10 @@ You can bootstrap SwiftConfigs with different handlers for different categories:
 ConfigsSystem.bootstrap(
     [
         .secure: .keychain,
-        .secureRemote: .keychain(iCloudSync: true),
+        .secureSynced: .keychain(iCloudSync: true),
         .environment: .environment,
         .default: .userDefaults,
-        .remote: .ubiquitous,
+        .synced: .ubiquitous,
     ]
 )
 ```

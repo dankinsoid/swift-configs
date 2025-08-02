@@ -17,8 +17,8 @@ public enum ConfigsSystem {
 			.default: .userDefaults,
 			.environment: .environment,
 			.secure: .keychain,
-			.secureRemote: .keychain(iCloudSync: true),
-			.remote: .ubiquitous,
+			.secureSynced: .keychain(iCloudSync: true),
+			.synced: .ubiquitous,
 			.memory: .inMemory
 		]
 	}
@@ -27,7 +27,7 @@ public enum ConfigsSystem {
 		[
 			.default: .userDefaults,
 			.environment: .environment,
-			.remote: .ubiquitous,
+			.synced: .ubiquitous,
 			.memory: .inMemory
 		]
 	}

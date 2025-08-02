@@ -10,7 +10,8 @@ public struct ConfigsCategory: Hashable {
     public static let `default` = ConfigsCategory()
     public static let secure = ConfigsCategory()
     public static let remote = ConfigsCategory()
-	public static let secureRemote = ConfigsCategory()
+	public static let secureSynced = ConfigsCategory()
+	public static let synced = ConfigsCategory()
 	public static let environment = ConfigsCategory()
 	public static let memory = ConfigsCategory()
 }
