@@ -31,7 +31,10 @@ public struct Configs {
     }
 
 	public func get<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
-		let key = Keys()[keyPath: keyPath]
+		get(Keys()[keyPath: keyPath])
+	}
+
+	public func get<Key: ConfigKey>(_ key: Key) -> Key.Value {
 		if let overwrittenValue = values[key.name] as? Key.Value {
 			return overwrittenValue
 		}
@@ -45,16 +48,39 @@ public struct Configs {
 		return result
 	}
 
-	public func set<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>, _ newValue: Key.Value) {
-		let key = Keys()[keyPath: keyPath]
+	public func set<Key: WritableConfigKey>(_ key: Key, _ newValue: Key.Value) {
 		if let value = key.encode(newValue) {
 			try? handler.writeValue(value, for: key.name, in: key.writeCategory)
 		}
 	}
 
+	public func set<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>, _ newValue: Key.Value) {
+		let key = Keys()[keyPath: keyPath]
+		set(key, newValue)
+	}
+
 	public func remove<Key: WritableConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) throws {
 		let key = Keys()[keyPath: keyPath]
+		try remove(key)
+	}
+	
+	public func remove<Key: WritableConfigKey>(_ key: Key) throws {
 		try handler.writeValue(nil, for: key.name, in: key.writeCategory)
+	}
+	
+	public func exists<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) -> Bool {
+		let key = Keys()[keyPath: keyPath]
+		return exists(key)
+	}
+	
+	public func exists<Key: ConfigKey>(_ key: Key) -> Bool {
+		if let overwrittenValue = values[key.name] {
+			return overwrittenValue is Key.Value
+		}
+		if let value = handler.value(for: key.name, in: key.readCategory) {
+			return key.decode(value.description) != nil
+		}
+		return false
 	}
 
     public var didFetch: Bool { handler.didFetch }
@@ -118,7 +144,7 @@ public struct Configs {
                 decode: @escaping (String) -> Value?,
                 encode: @escaping (Value) -> String?,
                 default defaultValue: @escaping @autoclosure () -> Value,
-				cacheDefaultValue: Bool = true
+				cacheDefaultValue: Bool = false
             ) {
                 name = key
                 self.readCategory = readCategory
@@ -128,6 +154,25 @@ public struct Configs {
                 self.defaultValue = defaultValue
 				self.cacheDefaultValue = cacheDefaultValue
             }
+			
+			public init(
+				_ key: String,
+				in category: ConfigsCategory,
+				decode: @escaping (String) -> Value?,
+				encode: @escaping (Value) -> String?,
+				default defaultValue: @escaping @autoclosure () -> Value,
+				cacheDefaultValue: Bool = false
+			) {
+				self.init(
+					key,
+					from: category,
+					to: category,
+					decode: decode,
+					encode: encode,
+					default: defaultValue(),
+					cacheDefaultValue: cacheDefaultValue
+				)
+			}
         }
     }
 }
@@ -224,7 +269,7 @@ public extension Configs.Keys.WritableKey where Value: LosslessStringConvertible
 		from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
         default defaultValue: @escaping @autoclosure () -> Value,
-		cacheDefaultValue: Bool = true
+		cacheDefaultValue: Bool = false
     ) {
 		self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.description, default: defaultValue(), cacheDefaultValue: cacheDefaultValue)
     }
@@ -241,7 +286,7 @@ public extension Configs.Keys.WritableKey where Value: RawRepresentable, Value.R
         from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
         default defaultValue: @escaping @autoclosure () -> Value,
-		cacheDefaultValue: Bool = true
+		cacheDefaultValue: Bool = false
     ) {
 		self.init(key, from: readCategory, to: writeCategory, decode: Value.init, encode: \.rawValue, default: defaultValue(), cacheDefaultValue: cacheDefaultValue)
     }
@@ -283,7 +328,7 @@ public extension Configs.Keys.WritableKey where Value: Codable {
 		from readCategory: ConfigsCategory? = nil,
 		to writeCategory: ConfigsCategory = .default,
 		default defaultValue: @escaping @autoclosure () -> Value,
-		cacheDefaultValue: Bool = true,
+		cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
     ) {

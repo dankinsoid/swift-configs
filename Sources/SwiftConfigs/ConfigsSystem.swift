@@ -109,7 +109,7 @@ public enum ConfigsSystem {
 
         private let lock = ReadWriteLock()
         private var _didFetch = false
-		private let handlers: [ConfigsCategory: ConfigsHandler]
+		public let handlers: [ConfigsCategory: ConfigsHandler]
         private var observers: [UUID: () -> Void] = [:]
         private var didStartListen = false
         private var didStartFetch = false
