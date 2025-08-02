@@ -12,9 +12,9 @@ public struct ConfigsCategory: Hashable, CustomStringConvertible {
     public static let `default` = ConfigsCategory("Default")
     public static let secure = ConfigsCategory("Secure")
     public static let remote = ConfigsCategory("Remote")
-	public static let secureSynced = ConfigsCategory("Secure Synced")
+	public static let syncedSecure = ConfigsCategory("Synced Secure")
 	public static let synced = ConfigsCategory("Synced")
-	public static let environment = ConfigsCategory("Environments")
+	public static let environments = ConfigsCategory("Environments")
 	public static let memory = ConfigsCategory("In Memory")
 }
 

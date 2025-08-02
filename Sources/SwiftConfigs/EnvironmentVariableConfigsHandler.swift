@@ -42,7 +42,7 @@ public struct EnvironmentVariableConfigsHandler: ConfigsHandler {
 extension ConfigsHandler where Self == EnvironmentVariableConfigsHandler {
 
 	/// Creates an environment variable configs handler
-	public static var environment: EnvironmentVariableConfigsHandler {
+	public static var environments: EnvironmentVariableConfigsHandler {
 		EnvironmentVariableConfigsHandler()
 	}
 }

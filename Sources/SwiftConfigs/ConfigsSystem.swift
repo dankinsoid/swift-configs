@@ -14,7 +14,7 @@ public enum ConfigsSystem {
     public static var defaultHandlers: [ConfigsCategory: ConfigsHandler] {
         [
             .default: .userDefaults,
-            .environment: .environment,
+            .environments: .environments,
             .memory: .inMemory,
         ]
         .withPlatformSpecific
@@ -24,10 +24,10 @@ public enum ConfigsSystem {
         isPreview
             ? [
                 .default: .inMemory,
-                .environment: .inMemory,
+                .environments: .inMemory,
                 .memory: .inMemory,
                 .secure: .inMemory,
-                .secureSynced: .inMemory,
+				.syncedSecure: .inMemory,
                 .synced: .inMemory,
                 .remote: .inMemory
             ]
@@ -221,7 +221,7 @@ private extension [ConfigsCategory: ConfigsHandler] {
         }
         #if canImport(Security)
             handlers[.secure] = .keychain
-            handlers[.secureSynced] = .keychain(iCloudSync: true)
+			handlers[.syncedSecure] = .keychain(iCloudSync: true)
         #endif
         return handlers
     }
