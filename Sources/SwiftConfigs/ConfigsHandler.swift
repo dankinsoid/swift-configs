@@ -24,23 +24,6 @@ public protocol ConfigsHandler: _SwiftConfigsSendableAnalyticsHandler {
 	var supportWriting: Bool { get }
 }
 
-public extension ConfigsHandler {
-    /// Default implementation returns nil
-    func allKeys() -> Set<String>? {
-        nil
-    }
-
-    /// Default implementation throws Unsupported error
-    func writeValue(_: String?, for _: String) throws {
-        throw Unsupported()
-    }
-
-    /// Default implementation throws Unsupported error
-    func clear() throws {
-        throw Unsupported()
-    }
-}
-
 struct Unsupported: Error {}
 
 // MARK: - Sendable support helpers

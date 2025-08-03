@@ -5,6 +5,7 @@ public typealias NOOPRemoteConfigsHandler = NOOPConfigsHandler
 
 /// A no-operation ConfigsHandler that does nothing
 public struct NOOPConfigsHandler: ConfigsHandler {
+	
     /// Shared instance of the NOOP handler
     public static let instance = NOOPConfigsHandler()
 	
@@ -27,6 +28,10 @@ public struct NOOPConfigsHandler: ConfigsHandler {
     public func listen(_: @escaping () -> Void) -> ConfigsCancellation? {
         return nil
     }
+	
+	public func allKeys() -> Set<String>? {
+		nil
+	}
 }
 
 extension ConfigsHandler where Self == NOOPConfigsHandler {
