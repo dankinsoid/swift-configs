@@ -44,6 +44,10 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
     public func allKeys() -> Set<String>? {
         Set(lock.withReaderLock { _values.keys })
     }
+	
+	public var supportWriting: Bool {
+		true
+	}
 
     public func writeValue(_ value: String?, for key: String) throws {
         lock.withWriterLock {

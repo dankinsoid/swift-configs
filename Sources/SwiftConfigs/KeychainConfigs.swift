@@ -86,6 +86,8 @@ import Foundation
 
 			return keys
 		}
+		
+		public var supportWriting: Bool { true }
 
 		public func writeValue(_ value: String?, for key: String) throws {
 			// Create a query for saving the token

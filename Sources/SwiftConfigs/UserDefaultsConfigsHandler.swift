@@ -69,6 +69,10 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
     public func value(for key: String) -> String? {
         userDefaults.string(forKey: key)
     }
+	
+	public var supportWriting: Bool {
+		true
+	}
 
     public func writeValue(_ value: String?, for key: String) throws {
         if let value = value {

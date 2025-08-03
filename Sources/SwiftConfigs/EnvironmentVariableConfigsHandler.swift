@@ -25,6 +25,10 @@ public struct EnvironmentVariableConfigsHandler: ConfigsHandler {
     public func value(for key: String) -> String? {
         processInfo.environment[key]
     }
+	
+	public var supportWriting: Bool {
+		false
+	}
     
     public func writeValue(_ value: String?, for key: String) throws {
         throw Unsupported()

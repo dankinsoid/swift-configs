@@ -20,6 +20,8 @@ public protocol ConfigsHandler: _SwiftConfigsSendableAnalyticsHandler {
     func clear() throws
     /// Returns all available configuration keys
     func allKeys() -> Set<String>?
+	/// Indicates if the handler supports writing value.
+	var supportWriting: Bool { get }
 }
 
 public extension ConfigsHandler {

@@ -61,6 +61,10 @@ public struct FallbackConfigsHandler: ConfigsHandler {
             return readKeys.union(writeKeys)
         }
     }
+	
+	public var supportWriting: Bool {
+		writeHandler.supportWriting
+	}
 
     public func writeValue(_ value: String?, for key: String) throws {
         // Write only to the write handler

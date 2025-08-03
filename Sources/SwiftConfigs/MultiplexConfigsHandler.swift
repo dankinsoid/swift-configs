@@ -52,6 +52,10 @@ public struct MultiplexConfigsHandler: ConfigsHandler {
             }
         }
     }
+	
+	public var supportWriting: Bool {
+		handlers.contains(where: \.supportWriting)
+	}
 
     public func writeValue(_ value: String?, for key: String) throws {
         var errors: [Error] = []

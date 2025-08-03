@@ -7,6 +7,8 @@ public typealias NOOPRemoteConfigsHandler = NOOPConfigsHandler
 public struct NOOPConfigsHandler: ConfigsHandler {
     /// Shared instance of the NOOP handler
     public static let instance = NOOPConfigsHandler()
+	
+	public var supportWriting: Bool { true }
 
     public init() {}
 

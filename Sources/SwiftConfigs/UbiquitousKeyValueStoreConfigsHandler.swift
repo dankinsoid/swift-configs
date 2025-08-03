@@ -59,6 +59,10 @@
                 }
             }
         }
+		
+		public var supportWriting: Bool {
+			true
+		}
 
         public func value(for key: String) -> String? {
             ubiquitousStore.string(forKey: key)
