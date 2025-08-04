@@ -24,6 +24,17 @@ public protocol ConfigsHandler: _SwiftConfigsSendableAnalyticsHandler {
 	var supportWriting: Bool { get }
 }
 
+extension ConfigsHandler {
+
+	public func value<T>(for key: String, as transformer: ConfigTransformer<T>) -> T? {
+		value(for: key).flatMap(transformer.decode)
+	}
+
+	public func  writeValue<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
+		try writeValue(value.flatMap(transformer.encode), for: key)
+	}
+}
+
 struct Unsupported: Error {}
 
 // MARK: - Sendable support helpers

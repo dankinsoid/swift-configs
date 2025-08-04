@@ -5,6 +5,7 @@ public typealias MockRemoteConfigsHandler = InMemoryConfigsHandler
 
 /// In-memory ConfigsHandler for testing and caching
 public final class InMemoryConfigsHandler: ConfigsHandler {
+
     /// The configuration values stored in memory
     public var values: [String: String] {
         get {
@@ -17,6 +18,8 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
             }
         }
     }
+	
+	public static let shared = InMemoryConfigsHandler()
 
     private var observers: [UUID: () -> Void] = [:]
     private var _values: [String: String]
@@ -80,14 +83,14 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
 
 extension ConfigsHandler where Self == InMemoryConfigsHandler {
 
-	/// Creates an in-memory configs handler
+	/// Returns a shared in-memory configs handler
 	public static var inMemory: InMemoryConfigsHandler {
-		InMemoryConfigsHandler()
+		InMemoryConfigsHandler.shared
 	}
-	
+
 	/// Creates an in-memory configs handler with initial values
 	/// - Parameter values: Initial configuration values
-	public static func inMemory(_ values: [String: String]) -> InMemoryConfigsHandler {
+	public static func inMemory(_ values: [String: String] = [:]) -> InMemoryConfigsHandler {
 		InMemoryConfigsHandler(values)
 	}
 }
