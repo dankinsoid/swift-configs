@@ -24,10 +24,10 @@ public extension ConfigWrapper {
 }
 
 @propertyWrapper
-public struct Config<Key: ConfigKey>: ConfigWrapper {
+public struct Config<Value>: ConfigWrapper {
 
 	public let configs: Configs
-	public let key: Key
+	public let key: Configs.Keys.Key<Value>
 
 	public var wrappedValue: Key.Value {
 		configs.get(key)
@@ -40,9 +40,9 @@ public struct Config<Key: ConfigKey>: ConfigWrapper {
 }
 
 @propertyWrapper
-public struct WritableConfig<Key: WritableConfigKey>: ConfigWrapper {
+public struct WritableConfig<Value>: ConfigWrapper {
 	public let configs: Configs
-	public let key: Key
+	public let key: Configs.Keys.WritableKey<Value>
 
 	public var wrappedValue: Key.Value {
 		get { configs.get(key) }
@@ -125,6 +125,72 @@ public extension ConfigWrapper where Key.Value: Codable {
 				key,
 				in: category,
 				as: .json(decoder: decoder, encoder: encoder),
+				default: defaultValue(),
+				cacheDefaultValue: cacheDefaultValue
+			),
+			configs: Configs()
+		)
+	}
+}
+
+public extension ConfigWrapper {
+
+	init<T: LosslessStringConvertible>(
+		_ key: String,
+		in category: ConfigsCategory,
+		cacheDefaultValue: Bool = false,
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+	)  where Key.Value == T? {
+		self.init(
+			Key(
+				key,
+				in: category,
+				as: .optional(.stringConvertable),
+				default: nil,
+				cacheDefaultValue: false
+			),
+			configs: Configs()
+		)
+	}
+
+	init<T: RawRepresentable>(
+		_ key: String,
+		in category: ConfigsCategory,
+		cacheDefaultValue: Bool = false,
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+	) where T.RawValue: LosslessStringConvertible, Key.Value == T? {
+		self.init(
+			Key(
+				key,
+				in: category,
+				as: .optional(.rawRepresentable),
+				default: defaultValue(),
+				cacheDefaultValue: false
+			),
+			configs: Configs()
+		)
+	}
+
+	/// Returns the key instance.
+	///
+	/// - Parameters:
+	///   - key: The key string.
+	///   - default: The default value to use if the key is not found.
+	///   - decoder: The JSON decoder to use for decoding the value.
+	@_disfavoredOverload
+	init<T: Codable>(
+		_ key: String,
+		in category: ConfigsCategory,
+		cacheDefaultValue: Bool = false,
+		decoder: JSONDecoder = JSONDecoder(),
+		encoder: JSONEncoder = JSONEncoder(),
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+	) where Key.Value == T? {
+		self.init(
+			Key(
+				key,
+				in: category,
+				as: .optional(.json(decoder: decoder, encoder: encoder)),
 				default: defaultValue(),
 				cacheDefaultValue: cacheDefaultValue
 			),

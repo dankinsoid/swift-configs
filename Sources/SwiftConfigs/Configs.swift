@@ -249,7 +249,7 @@ public extension ConfigKey {
 	}
 }
 
-public extension ConfigKey where Value: LosslessStringConvertible {
+public extension ConfigKey {
 
 	/// Returns the key instance.
 	///
@@ -261,11 +261,26 @@ public extension ConfigKey where Value: LosslessStringConvertible {
 		handler: ConfigsHandler,
 		default defaultValue: @escaping @autoclosure () -> Value,
 		cacheDefaultValue: Bool = false
-	) {
+	) where Value: LosslessStringConvertible {
 		self.init(
 			key,
 			handler: { _ in handler },
 			as: .stringConvertable,
+			default: defaultValue(),
+			cacheDefaultValue: false
+		)
+	}
+	
+	init<T>(
+		_ key: String,
+		handler: ConfigsHandler,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false
+	) where T: LosslessStringConvertible, Value == T? {
+		self.init(
+			key,
+			handler: handler,
+			as: .optional(.stringConvertable),
 			default: defaultValue(),
 			cacheDefaultValue: false
 		)
@@ -276,7 +291,7 @@ public extension ConfigKey where Value: LosslessStringConvertible {
 		in category: ConfigsCategory,
 		default defaultValue: @escaping @autoclosure () -> Value,
 		cacheDefaultValue: Bool = false
-	) {
+	) where Value: LosslessStringConvertible {
 		self.init(
 			key,
 			handler: { $0.handler(for: category) },
@@ -285,16 +300,28 @@ public extension ConfigKey where Value: LosslessStringConvertible {
 			cacheDefaultValue: false
 		)
 	}
-}
 
-public extension ConfigKey where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
-
+	init<T>(
+		_ key: String,
+		in category: ConfigsCategory,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false
+	) where T: LosslessStringConvertible, Value == T? {
+		self.init(
+			key,
+			handler: { $0.handler(for: category) },
+			as: .optional(.stringConvertable),
+			default: defaultValue(),
+			cacheDefaultValue: false
+		)
+	}
+	
 	init(
 		_ key: String,
 		handler: ConfigsHandler,
 		default defaultValue: @escaping @autoclosure () -> Value,
 		cacheDefaultValue: Bool = false
-	) {
+	) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
 		self.init(
 			key,
 			handler: handler,
@@ -314,7 +341,7 @@ public extension ConfigKey where Value: RawRepresentable, Value.RawValue: Lossle
 		in category: ConfigsCategory,
 		default defaultValue: @escaping @autoclosure () -> Value,
 		cacheDefaultValue: Bool = false
-	) {
+	) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
 		self.init(
 			key,
 			in: category,
@@ -323,10 +350,47 @@ public extension ConfigKey where Value: RawRepresentable, Value.RawValue: Lossle
 			cacheDefaultValue: cacheDefaultValue
 		)
 	}
-}
 
-public extension ConfigKey where Value: Codable {
-
+	/// Returns the key instance.
+	///
+	/// - Parameters:
+	///   - key: The key string.
+	///   - default: The default value to use if the key is not found.
+	init<T>(
+		_ key: String,
+		in category: ConfigsCategory,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false
+	) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
+		self.init(
+			key,
+			in: category,
+			as: .optional(.rawRepresentable),
+			default: defaultValue(),
+			cacheDefaultValue: cacheDefaultValue
+		)
+	}
+	
+	/// Returns the key instance.
+	///
+	/// - Parameters:
+	///   - key: The key string.
+	///   - default: The default value to use if the key is not found.
+	init<T>(
+		_ key: String,
+		handler: ConfigsHandler,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false
+	) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
+		self.init(
+			key,
+			handler: handler,
+			as: .optional(.rawRepresentable),
+			default: defaultValue(),
+			cacheDefaultValue: cacheDefaultValue
+		)
+	}
+	
 	@_disfavoredOverload
 	init(
 		_ key: String,
@@ -335,7 +399,7 @@ public extension ConfigKey where Value: Codable {
 		cacheDefaultValue: Bool = false,
 		decoder: JSONDecoder = JSONDecoder(),
 		encoder: JSONEncoder = JSONEncoder()
-	) {
+	) where Value: Codable {
 		self.init(
 			key,
 			handler: handler,
@@ -359,11 +423,59 @@ public extension ConfigKey where Value: Codable {
 		cacheDefaultValue: Bool = false,
 		decoder: JSONDecoder = JSONDecoder(),
 		encoder: JSONEncoder = JSONEncoder()
-	) {
+	) where Value: Codable {
 		self.init(
 			key,
 			in: category,
 			as: .json(decoder: decoder, encoder: encoder),
+			default: defaultValue(),
+			cacheDefaultValue: cacheDefaultValue
+		)
+	}
+	
+	/// Returns the key instance.
+	///
+	/// - Parameters:
+	///   - key: The key string.
+	///   - default: The default value to use if the key is not found.
+	///   - decoder: The JSON decoder to use for decoding the value.
+	@_disfavoredOverload
+	init<T>(
+		_ key: String,
+		in category: ConfigsCategory,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false,
+		decoder: JSONDecoder = JSONDecoder(),
+		encoder: JSONEncoder = JSONEncoder()
+	) where T: Codable, T? == Value {
+		self.init(
+			key,
+			in: category,
+			as: .optional(.json(decoder: decoder, encoder: encoder)),
+			default: defaultValue(),
+			cacheDefaultValue: cacheDefaultValue
+		)
+	}
+	
+	/// Returns the key instance.
+	///
+	/// - Parameters:
+	///   - key: The key string.
+	///   - default: The default value to use if the key is not found.
+	///   - decoder: The JSON decoder to use for decoding the value.
+	@_disfavoredOverload
+	init<T>(
+		_ key: String,
+		handler: ConfigsHandler,
+		default defaultValue: @escaping @autoclosure () -> Value,
+		cacheDefaultValue: Bool = false,
+		decoder: JSONDecoder = JSONDecoder(),
+		encoder: JSONEncoder = JSONEncoder()
+	) where T: Codable, T? == Value {
+		self.init(
+			key,
+			handler: handler,
+			as: .optional(.json(decoder: decoder, encoder: encoder)),
 			default: defaultValue(),
 			cacheDefaultValue: cacheDefaultValue
 		)

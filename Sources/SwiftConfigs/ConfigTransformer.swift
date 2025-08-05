@@ -11,6 +11,17 @@ public struct ConfigTransformer<Value> {
 	}
 }
 
+extension ConfigTransformer {
+
+	public static func optional<T>(_ wrapped: ConfigTransformer<T>) -> ConfigTransformer where T? == Value {
+		ConfigTransformer {
+			wrapped.decode($0)
+		} encode: { value in
+			value.flatMap(wrapped.encode)
+		}
+	}
+}
+
 extension ConfigTransformer where Value: LosslessStringConvertible {
 	
 	public init() {
