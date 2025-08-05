@@ -198,3 +198,8 @@ public extension ConfigWrapper {
 		)
 	}
 }
+
+#if compiler(>=5.6)
+extension Config: Sendable where Value: Sendable {}
+extension WritableConfig: Sendable where Value: Sendable {}
+#endif
