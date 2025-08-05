@@ -14,10 +14,6 @@ public extension ConfigWrapper {
 		self.init(Configs.Keys()[keyPath: key], configs: Configs())
 	}
 	
-	var projectedValue: Self {
-		self
-	}
-	
 	func exists() -> Bool {
 		configs.exists(key)
 	}
@@ -32,6 +28,10 @@ public struct Config<Value>: ConfigWrapper {
 	public var wrappedValue: Key.Value {
 		configs.get(key)
 	}
+	
+	public var projectedValue: Self {
+		self
+	}
 
 	public init(_ key: Key, configs: Configs) {
 		self.key = key
@@ -41,6 +41,7 @@ public struct Config<Value>: ConfigWrapper {
 
 @propertyWrapper
 public struct WritableConfig<Value>: ConfigWrapper {
+
 	public let configs: Configs
 	public let key: Configs.Keys.WritableKey<Value>
 
@@ -49,6 +50,10 @@ public struct WritableConfig<Value>: ConfigWrapper {
 		nonmutating set {
 			configs.set(key, newValue)
 		}
+	}
+	
+	public var projectedValue: Self {
+		self
 	}
 	
 	public init(_ key: Key, configs: Configs) {
