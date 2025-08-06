@@ -2,45 +2,45 @@ import Foundation
 
 /// A ConfigsHandler that reads from a specified handler first, then falls back to the write handler, but only writes to the write handler
 public struct FallbackConfigsHandler: ConfigsHandler {
-    public let readHandler: ConfigsHandler
-    public let writeHandler: ConfigsHandler
+    public let fallbackHandler: ConfigsHandler
+    public let mainHandler: ConfigsHandler
 
     /// Creates a fallback handler that reads from readHandler first, then writeHandler, but only writes to writeHandler
     /// - Parameters:
     ///   - readHandler: The primary handler to read from
     ///   - writeHandler: The handler to write to and use as fallback for reads
-    public init(readHandler: ConfigsHandler, writeHandler: ConfigsHandler) {
-        self.readHandler = readHandler
-        self.writeHandler = writeHandler
+    public init(mainHandler: ConfigsHandler, fallbackHandler: ConfigsHandler) {
+        self.mainHandler = mainHandler
+        self.fallbackHandler = fallbackHandler
     }
 
     public func value(for key: String) -> String? {
         // Try the read handler first, then fall back to the write handler
-        if let value = readHandler.value(for: key) {
+        if let value = mainHandler.value(for: key) {
             return value
         }
-        return writeHandler.value(for: key)
+        return fallbackHandler.value(for: key)
     }
 
     public func fetch(completion: @escaping (Error?) -> Void) {
         // Fetch from both handlers
         let multiplexCompletion = FallbackCompletion(count: 2, completion: completion)
 
-        readHandler.fetch { error in
+		mainHandler.fetch { error in
             multiplexCompletion.call(with: error)
         }
 
-        writeHandler.fetch { error in
+		fallbackHandler.fetch { error in
             multiplexCompletion.call(with: error)
         }
     }
 
     public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
         // Listen to both handlers
-        let readCancellation = readHandler.listen(listener)
-        let writeCancellation = writeHandler.listen(listener)
+        let mainCancellation = mainHandler.listen(listener)
+        let fallbackCancellation = fallbackHandler.listen(listener)
 
-        let cancellables = [readCancellation, writeCancellation].compactMap { $0 }
+        let cancellables = [mainCancellation, fallbackCancellation].compactMap { $0 }
 
         return cancellables.isEmpty ? nil : ConfigsCancellation {
             cancellables.forEach { $0.cancel() }
@@ -48,32 +48,21 @@ public struct FallbackConfigsHandler: ConfigsHandler {
     }
 
     public func allKeys() -> Set<String>? {
-        // Combine keys from both handlers
-        let readKeys = readHandler.allKeys()
-        let writeKeys = writeHandler.allKeys()
-
-        switch (readKeys, writeKeys) {
-        case (nil, nil):
-            return nil
-        case let (keys?, nil), let (nil, keys?):
-            return keys
-        case let (readKeys?, writeKeys?):
-            return readKeys.union(writeKeys)
-        }
+		mainHandler.allKeys()
     }
 	
 	public var supportWriting: Bool {
-		writeHandler.supportWriting
+		mainHandler.supportWriting
 	}
 
     public func writeValue(_ value: String?, for key: String) throws {
         // Write only to the write handler
-        try writeHandler.writeValue(value, for: key)
+        try mainHandler.writeValue(value, for: key)
     }
 
     public func clear() throws {
         // Clear only the write handler
-        try writeHandler.clear()
+        try mainHandler.clear()
     }
 }
 
@@ -118,7 +107,7 @@ public extension ConfigsHandler where Self == FallbackConfigsHandler {
     /// - Parameters:
     ///   - readHandler: The primary handler to read from
     ///   - writeHandler: The handler to write to and use as fallback for reads
-    static func fallback(read readHandler: ConfigsHandler, write writeHandler: ConfigsHandler) -> FallbackConfigsHandler {
-        FallbackConfigsHandler(readHandler: readHandler, writeHandler: writeHandler)
+    static func fallback(for mainHandler: ConfigsHandler, with fallbackHandler: ConfigsHandler) -> FallbackConfigsHandler {
+        FallbackConfigsHandler(mainHandler: mainHandler, fallbackHandler: fallbackHandler)
     }
 }

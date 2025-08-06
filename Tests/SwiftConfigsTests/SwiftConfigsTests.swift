@@ -12,6 +12,7 @@ final class SwiftConfigsTests: XCTestCase {
         ("testFetchIfNeeded", testFetchIfNeeded),
         ("testEnvironmentVariableHandler", testEnvironmentVariableHandler),
         ("testFallbackConfigsHandler", testFallbackConfigsHandler),
+        ("testPrefixConfigsHandler", testPrefixConfigsHandler),
     ]
 
     var handler = InMemoryConfigsHandler()
@@ -116,7 +117,7 @@ final class SwiftConfigsTests: XCTestCase {
         // Arrange
         let readHandler = InMemoryConfigsHandler(["remote_key": "remote_value"])
         let writeHandler = InMemoryConfigsHandler(["local_key": "local_value"])
-        let fallbackHandler = FallbackConfigsHandler(readHandler: readHandler, writeHandler: writeHandler)
+        let fallbackHandler = FallbackConfigsHandler(mainHandler: writeHandler, fallbackHandler: readHandler)
         
         // Test reading from read handler first
         XCTAssertEqual(fallbackHandler.value(for: "remote_key"), "remote_value")
@@ -141,6 +142,40 @@ final class SwiftConfigsTests: XCTestCase {
         try? fallbackHandler.clear()
         XCTAssertNil(writeHandler.value(for: "local_key"))
         XCTAssertEqual(readHandler.value(for: "remote_key"), "remote_value")
+    }
+    
+    func testPrefixConfigsHandler() {
+        // Arrange
+        let underlyingHandler = InMemoryConfigsHandler(["app_user_name": "john", "app_user_age": "25", "other_key": "value"])
+        let prefixHandler = PrefixConfigsHandler(prefix: "app_", handler: underlyingHandler)
+        
+        // Test reading values with prefix
+        XCTAssertEqual(prefixHandler.value(for: "user_name"), "john")
+        XCTAssertEqual(prefixHandler.value(for: "user_age"), "25")
+        XCTAssertNil(prefixHandler.value(for: "other_key"))
+        XCTAssertNil(prefixHandler.value(for: "non_existent"))
+        
+        // Test allKeys returns only unprefixed keys for matching prefix
+        let allKeys = prefixHandler.allKeys()
+        XCTAssertEqual(allKeys?.count, 2)
+        XCTAssertTrue(allKeys?.contains("user_name") ?? false)
+        XCTAssertTrue(allKeys?.contains("user_age") ?? false)
+        XCTAssertFalse(allKeys?.contains("other_key") ?? true)
+        
+        // Test writing adds prefix
+        try? prefixHandler.writeValue("doe", for: "user_surname")
+        XCTAssertEqual(underlyingHandler.value(for: "app_user_surname"), "doe")
+        XCTAssertEqual(prefixHandler.value(for: "user_surname"), "doe")
+        
+        // Test clear only clears prefixed keys
+        try? prefixHandler.clear()
+        XCTAssertNil(underlyingHandler.value(for: "app_user_name"))
+        XCTAssertNil(underlyingHandler.value(for: "app_user_age"))
+        XCTAssertNil(underlyingHandler.value(for: "app_user_surname"))
+        XCTAssertEqual(underlyingHandler.value(for: "other_key"), "value")
+        
+        // Test supportWriting delegates to underlying handler
+        XCTAssertEqual(prefixHandler.supportWriting, underlyingHandler.supportWriting)
     }
 }
 
