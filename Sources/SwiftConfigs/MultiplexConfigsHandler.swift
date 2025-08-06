@@ -91,7 +91,7 @@ public struct MultiplexConfigsHandler: ConfigsHandler {
     }
 }
 
-private final class MultiplexCompletion {
+final class MultiplexCompletion {
     let lock = ReadWriteLock()
     var count: Int
     var errors: [Error?] = []

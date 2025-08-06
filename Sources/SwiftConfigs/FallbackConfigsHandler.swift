@@ -24,7 +24,7 @@ public struct FallbackConfigsHandler: ConfigsHandler {
 
     public func fetch(completion: @escaping (Error?) -> Void) {
         // Fetch from both handlers
-        let multiplexCompletion = FallbackCompletion(count: 2, completion: completion)
+        let multiplexCompletion = MultiplexCompletion(count: 2, completion: completion)
 
 		mainHandler.fetch { error in
             multiplexCompletion.call(with: error)
@@ -48,58 +48,34 @@ public struct FallbackConfigsHandler: ConfigsHandler {
     }
 
     public func allKeys() -> Set<String>? {
-		mainHandler.allKeys()
+		if let keys = mainHandler.allKeys() {
+			return keys.union(fallbackHandler.allKeys() ?? [])
+		} else {
+			return fallbackHandler.allKeys()
+		}
     }
 	
 	public var supportWriting: Bool {
-		mainHandler.supportWriting
+		mainHandler.supportWriting || fallbackHandler.supportWriting
 	}
 
     public func writeValue(_ value: String?, for key: String) throws {
-        // Write only to the write handler
-        try mainHandler.writeValue(value, for: key)
+		if mainHandler.supportWriting {
+			try mainHandler.writeValue(value, for: key)
+		} else {
+			try fallbackHandler.writeValue(value, for: key)
+		}
     }
 
     public func clear() throws {
-        // Clear only the write handler
-        try mainHandler.clear()
+		do {
+			try mainHandler.clear()
+		} catch {
+			try fallbackHandler.clear()
+			throw error
+		}
+		try fallbackHandler.clear()
     }
-}
-
-private final class FallbackCompletion {
-    let lock = ReadWriteLock()
-    var count: Int
-    var errors: [Error?] = []
-    let completion: (Error?) -> Void
-
-    init(count: Int, completion: @escaping (Error?) -> Void) {
-        self.completion = completion
-        self.count = count
-    }
-
-    func call(with error: Error?) {
-        lock.withWriterLock {
-            count -= 1
-            if let error {
-                self.errors.append(error)
-            }
-        }
-        let (isLast, errors) = lock.withReaderLock { (count == 0, self.errors) }
-        if isLast {
-            let error: Error?
-            switch errors.count {
-            case 0: error = nil
-            case 1: error = errors[0]
-            default: error = FallbackErrors(errors: errors)
-            }
-            completion(error)
-        }
-    }
-}
-
-/// Error type that wraps multiple errors from handlers
-public struct FallbackErrors: Error {
-    public let errors: [Error?]
 }
 
 public extension ConfigsHandler where Self == FallbackConfigsHandler {
