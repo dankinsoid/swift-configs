@@ -13,6 +13,7 @@ import Foundation
 		public let secClass: SecClass
 		/// Whether to sync keychain items with iCloud
 		public let iCloudSync: Bool
+		public let attrAccessible: SecAttrAccessible
 		private var observers: [UUID: () -> Void] = [:]
 		private let lock = ReadWriteLock()
 
@@ -24,10 +25,16 @@ import Foundation
 		///   - service: Optional service identifier for keychain items
 		///   - secClass: Security class for keychain items
 		///   - iCloudSync: Whether to enable iCloud Keychain synchronization
-		public init(service: String? = nil, class secClass: SecClass = .genericPassowrd, iCloudSync: Bool = false) {
+		public init(
+			service: String? = nil,
+			class secClass: SecClass = .genericPassowrd,
+			attrAccessible: SecAttrAccessible = .afterFirstUnlock,
+			iCloudSync: Bool = false
+		) {
 			self.service = service
 			self.secClass = secClass
 			self.iCloudSync = iCloudSync
+			self.attrAccessible = attrAccessible
 		}
 
 		public func value(for key: String) -> String? {
@@ -143,6 +150,27 @@ import Foundation
 			}
 			.forEach { $0() }
 		}
+		
+		public struct SecAttrAccessible: RawRepresentable, CaseIterable {
+			public let rawValue: CFString
+
+			public static var allCases: [SecAttrAccessible] {
+				[.whenUnlocked, .afterFirstUnlock, .always, .whenUnlockedThisDeviceOnly]
+			}
+
+			public init(rawValue: CFString) {
+				self.rawValue = rawValue
+			}
+
+			/// The value that indicates the item is accessible only when the device is unlocked.
+			public static let whenUnlocked = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlocked)
+			/// The value that indicates the item is accessible after the first unlock.
+			public static let afterFirstUnlock = SecAttrAccessible(rawValue: kSecAttrAccessibleAfterFirstUnlock)
+			/// The value that indicates the item is always accessible.
+			public static let always = SecAttrAccessible(rawValue: kSecAttrAccessibleAlways)
+			/// The value that indicates the item is accessible only when the device is unlocked and this item is not synced with iCloud.
+			public static let whenUnlockedThisDeviceOnly = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
+		}
 
 		/// Keychain security class options
 		public struct SecClass: RawRepresentable, CaseIterable {
@@ -210,7 +238,7 @@ import Foundation
 		}
 
 		private func configureAccess(query: inout [String: Any]) {
-			query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+			query[kSecAttrAccessible as String] = attrAccessible.rawValue
 
 			if iCloudSync {
 				query[kSecAttrSynchronizable as String] = kCFBooleanTrue
@@ -301,9 +329,10 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 	public static func keychain(
 		service: String? = nil,
 		class secClass: KeychainConfigsHandler.SecClass = .genericPassowrd,
+		attrAccessible: KeychainConfigsHandler.SecAttrAccessible = .afterFirstUnlock,
 		iCloudSync: Bool = false
 	) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(service: service, class: secClass, iCloudSync: iCloudSync)
+		KeychainConfigsHandler(service: service, class: secClass, attrAccessible: attrAccessible, iCloudSync: iCloudSync)
 	}
 }
 #endif
