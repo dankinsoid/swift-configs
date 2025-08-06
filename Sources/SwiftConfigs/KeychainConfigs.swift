@@ -60,26 +60,17 @@ import Foundation
 
 		public func allKeys() -> Set<String>? {
 			var query: [String: Any] = [
-				kSecClass as String: secClass.rawValue,
-				kSecReturnData as String: kCFBooleanTrue!,
 				kSecReturnAttributes as String: kCFBooleanTrue!,
-				kSecReturnRef as String: kCFBooleanTrue!,
 				kSecMatchLimit as String: kSecMatchLimitAll,
 			]
-
-			if iCloudSync {
-				query[kSecAttrSynchronizable as String] = kCFBooleanTrue
-			}
-			if let service {
-				query[kSecAttrService as String] = service
-			}
-
+			configureAccess(query: &query)
+			
 			var result: AnyObject?
-
+			
 			let lastResultCode = withUnsafeMutablePointer(to: &result) {
 				SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
 			}
-
+			
 			var keys = Set<String>()
 			if lastResultCode == noErr {
 				if let array = result as? [[String: Any]] {
@@ -89,8 +80,11 @@ import Foundation
 						}
 					}
 				}
-			} else {}
-
+			} else if lastResultCode != errSecItemNotFound {
+				// Handle actual errors (but not "no items found")
+				return nil
+			}
+			
 			return keys
 		}
 		
@@ -99,7 +93,6 @@ import Foundation
 		public func writeValue(_ value: String?, for key: String) throws {
 			// Create a query for saving the token
 			var query: [String: Any] = [
-				kSecClass as String: secClass.rawValue,
 				kSecAttrAccount as String: key,
 			]
 			configureAccess(query: &query)
@@ -129,9 +122,7 @@ import Foundation
 		}
 
 		public func clear() throws {
-			var query: [String: Any] = [
-				kSecClass as String: secClass.rawValue,
-			]
+			var query: [String: Any] = [:]
 			configureAccess(query: &query)
 
 			var status = SecItemDelete(query as CFDictionary)
@@ -207,7 +198,6 @@ import Foundation
 		private func loadStatus(for key: String) -> ([String: Any], CFTypeRef?, OSStatus) {
 			// Create a query for retrieving the value
 			var query: [String: Any] = [
-				kSecClass as String: secClass.rawValue,
 				kSecAttrAccount as String: key,
 				kSecReturnData as String: kCFBooleanTrue!,
 				kSecMatchLimit as String: kSecMatchLimitOne,
@@ -239,6 +229,7 @@ import Foundation
 
 		private func configureAccess(query: inout [String: Any]) {
 			query[kSecAttrAccessible as String] = attrAccessible.rawValue
+			query[kSecClass as String] = secClass.rawValue
 
 			if iCloudSync {
 				query[kSecAttrSynchronizable as String] = kCFBooleanTrue
