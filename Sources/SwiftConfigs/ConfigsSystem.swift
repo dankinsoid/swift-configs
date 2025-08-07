@@ -25,7 +25,6 @@ public enum ConfigsSystem {
 		.memory: .inMemory(),
 		.secure: .inMemory(),
 		.syncedSecure: .inMemory(),
-		.synced: .inMemory(),
 		.remote: .inMemory()
 	]
 	
@@ -67,41 +66,18 @@ public enum ConfigsSystem {
 	
 	/// Returns a reference to the configured handler.
 	static var handler: Handler {
-		_handler.underlying
-	}
-	
-	/// Acquire a writer lock for the duration of the given block.
-	///
-	/// - Parameter body: The block to execute while holding the lock.
-	/// - Returns: The value returned by the block.
-	public static func withWriterLock<T>(_ body: () throws -> T) rethrows -> T {
-		try _handler.withWriterLock(body)
+		_handler.handler
 	}
 	
 	private final class HandlerBox {
-		private let lock = ReadWriteLock()
-		fileprivate var handler: Handler
-		private var initialized = false
+		let handler: Handler
 		
 		init(_ underlying: [ConfigsCategory: ConfigsHandler]) {
 			handler = Handler(underlying)
 		}
 		
 		func replaceHandler(_ factory: [ConfigsCategory: ConfigsHandler]) {
-			withWriterLock {
-				self.handler = Handler(factory)
-				self.initialized = true
-			}
-		}
-		
-		var underlying: Handler {
-			lock.withReaderLock {
-				handler
-			}
-		}
-		
-		func withWriterLock<T>(_ body: () throws -> T) rethrows -> T {
-			try lock.withWriterLock(body)
+			self.handler.handlers = factory
 		}
 	}
 	
@@ -111,17 +87,22 @@ public enum ConfigsSystem {
 				_didFetch
 			}
 		}
-		
+
 		private let lock = ReadWriteLock()
+		private let handlersLock = ReadWriteLock()
 		private var _didFetch = false
-		public let handlers: [ConfigsCategory: ConfigsHandler]
+		fileprivate(set) public var handlers: [ConfigsCategory: ConfigsHandler] {
+			get { handlersLock.withReaderLock { _handlers } }
+			set { handlersLock.withWriterLockVoid { _handlers = newValue } }
+		}
+		private var _handlers: [ConfigsCategory: ConfigsHandler]
 		private var observers: [UUID: () -> Void] = [:]
 		private var didStartListen = false
 		private var didStartFetch = false
 		private var cancellation: ConfigsCancellation?
 		
 		public init(_ handlers: [ConfigsCategory: ConfigsHandler]) {
-			self.handlers = handlers
+			_handlers = handlers
 		}
 		
 		func fetch(completion: @escaping (Error?) -> Void) {
@@ -215,9 +196,6 @@ public enum ConfigsSystem {
 private extension [ConfigsCategory: ConfigsHandler] {
     var withPlatformSpecific: [ConfigsCategory: ConfigsHandler] {
         var handlers = self
-        if #available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *) {
-            handlers[.synced] = .ubiquitous
-        }
         #if canImport(Security)
             handlers[.secure] = .keychain
 			handlers[.syncedSecure] = .keychain(iCloudSync: true)
