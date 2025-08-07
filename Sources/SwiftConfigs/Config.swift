@@ -69,10 +69,10 @@ public struct WritableConfig<Value>: ConfigWrapper {
 public extension ConfigWrapper where Key.Value: LosslessStringConvertible {
 
 	init(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value,
 		_ key: String,
 		in category: ConfigsCategory,
-		cacheDefaultValue: Bool = false,
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value
+		cacheDefaultValue: Bool = false
 	) {
 		self.init(
 			Key(
@@ -90,10 +90,10 @@ public extension ConfigWrapper where Key.Value: LosslessStringConvertible {
 public extension ConfigWrapper where Key.Value: RawRepresentable, Key.Value.RawValue: LosslessStringConvertible {
 
 	init(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value,
 		_ key: String,
 		in category: ConfigsCategory,
-		cacheDefaultValue: Bool = false,
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value
+		cacheDefaultValue: Bool = false
 	) {
 		self.init(
 			Key(
@@ -118,12 +118,12 @@ public extension ConfigWrapper where Key.Value: Codable {
 	///   - decoder: The JSON decoder to use for decoding the value.
 	@_disfavoredOverload
 	init(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value,
 		_ key: String,
 		in category: ConfigsCategory,
 		cacheDefaultValue: Bool = false,
 		decoder: JSONDecoder = JSONDecoder(),
-		encoder: JSONEncoder = JSONEncoder(),
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value
+		encoder: JSONEncoder = JSONEncoder()
 	) {
 		self.init(
 			Key(
@@ -141,10 +141,10 @@ public extension ConfigWrapper where Key.Value: Codable {
 public extension ConfigWrapper {
 
 	init<T: LosslessStringConvertible>(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil,
 		_ key: String,
 		in category: ConfigsCategory,
-		cacheDefaultValue: Bool = false,
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+		cacheDefaultValue: Bool = false
 	)  where Key.Value == T? {
 		self.init(
 			Key(
@@ -159,10 +159,10 @@ public extension ConfigWrapper {
 	}
 
 	init<T: RawRepresentable>(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil,
 		_ key: String,
 		in category: ConfigsCategory,
-		cacheDefaultValue: Bool = false,
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+		cacheDefaultValue: Bool = false
 	) where T.RawValue: LosslessStringConvertible, Key.Value == T? {
 		self.init(
 			Key(
@@ -184,12 +184,12 @@ public extension ConfigWrapper {
 	///   - decoder: The JSON decoder to use for decoding the value.
 	@_disfavoredOverload
 	init<T: Codable>(
+		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil,
 		_ key: String,
 		in category: ConfigsCategory,
 		cacheDefaultValue: Bool = false,
 		decoder: JSONDecoder = JSONDecoder(),
-		encoder: JSONEncoder = JSONEncoder(),
-		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil
+		encoder: JSONEncoder = JSONEncoder()
 	) where Key.Value == T? {
 		self.init(
 			Key(
