@@ -33,8 +33,8 @@ public struct Configs {
 	}
 
 	public func get<Key: ConfigKey>(_ key: Key) -> Key.Value {
-		if let overwrittenValue = values[key.name] as? Key.Value {
-			return overwrittenValue
+		if let overwrittenValue = values[key.name], let result = overwrittenValue as? Key.Value {
+			return result
 		}
 		if let value = key.handler(handler).value(for: key.name), let decoded = (value as? Key.Value) ?? key.transformer.decode(value.description) {
 			return decoded
