@@ -80,7 +80,7 @@ public extension ConfigWrapper where Key.Value: LosslessStringConvertible {
 				handler: { $0.handler(for: category) },
 				as: .stringConvertable,
 				default: defaultValue(),
-				cacheDefaultValue: false
+				cacheDefaultValue: cacheDefaultValue
 			),
 			configs: Configs()
 		)
@@ -101,7 +101,7 @@ public extension ConfigWrapper where Key.Value: RawRepresentable, Key.Value.RawV
 				in: category,
 				as: .rawRepresentable,
 				default: defaultValue(),
-				cacheDefaultValue: false
+				cacheDefaultValue: cacheDefaultValue
 			),
 			configs: Configs()
 		)
@@ -152,7 +152,7 @@ public extension ConfigWrapper {
 				in: category,
 				as: .optional(.stringConvertable),
 				default: nil,
-				cacheDefaultValue: false
+				cacheDefaultValue: cacheDefaultValue
 			),
 			configs: Configs()
 		)
@@ -170,7 +170,7 @@ public extension ConfigWrapper {
 				in: category,
 				as: .optional(.rawRepresentable),
 				default: defaultValue(),
-				cacheDefaultValue: false
+				cacheDefaultValue: cacheDefaultValue
 			),
 			configs: Configs()
 		)

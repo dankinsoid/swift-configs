@@ -228,7 +228,7 @@ public extension ConfigKey {
 			handler: { _ in handler },
 			as: transformer,
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 
@@ -244,7 +244,7 @@ public extension ConfigKey {
 			handler: { $0.handler(for: category) },
 			as: transformer,
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 }
@@ -267,7 +267,7 @@ public extension ConfigKey {
 			handler: { _ in handler },
 			as: .stringConvertable,
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 	
@@ -282,7 +282,7 @@ public extension ConfigKey {
 			handler: handler,
 			as: .optional(.stringConvertable),
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 
@@ -297,7 +297,7 @@ public extension ConfigKey {
 			handler: { $0.handler(for: category) },
 			as: .stringConvertable,
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 
@@ -312,7 +312,7 @@ public extension ConfigKey {
 			handler: { $0.handler(for: category) },
 			as: .optional(.stringConvertable),
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 	
@@ -327,7 +327,7 @@ public extension ConfigKey {
 			handler: handler,
 			as: .rawRepresentable,
 			default: defaultValue(),
-			cacheDefaultValue: false
+			cacheDefaultValue: cacheDefaultValue
 		)
 	}
 
