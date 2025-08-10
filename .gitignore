@@ -116,3 +116,4 @@ iOSInjectionProject/
 .env.*.local
 
 Package.resolved
+.aider*
