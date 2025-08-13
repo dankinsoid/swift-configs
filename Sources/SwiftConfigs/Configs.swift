@@ -135,10 +135,23 @@ public extension Configs {
 	}
 
 	@discardableResult
-	func listen<T: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, T>, _ observer: @escaping (T.Value) -> Void) -> ConfigsCancellation {
-		listen {
-			observer($0[dynamicMember: keyPath])
+	func listen<T: ConfigKey>(_ key: T, _ observer: @escaping (T.Value) -> Void) -> ConfigsCancellation {
+		let overriden = values[key.name]
+		let cancellation = key.handler(handler).listen { [weak handler, overriden] in
+			if let overriden, let result = overriden as? T.Value {
+				observer(result)
+				return
+			}
+			guard let handler else { return }
+			observer(key.handler(handler).value(for: key.name, as: key.transformer) ?? key.defaultValue())
 		}
+		return cancellation ?? ConfigsCancellation {}
+	}
+
+	@discardableResult
+	func listen<T: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, T>, _ observer: @escaping (T.Value) -> Void) -> ConfigsCancellation {
+		let key = Keys()[keyPath: keyPath]
+		return listen(key, observer)
 	}
 }
 
