@@ -26,12 +26,12 @@ final class SwiftConfigsTests: XCTestCase {
         let value = Configs().testKey
 
         // Assert
-        XCTAssertEqual(value, Configs.Keys().testKey.defaultValue())
+        XCTAssertEqual(value, "defaultValue")
     }
 
     func testReadValue() {
         // Arrange
-        handler.set("value", for: \.testKey)
+        try? handler.writeValue("value", for: "key")
 
         // Act
         let value = Configs().testKey
@@ -85,7 +85,7 @@ final class SwiftConfigsTests: XCTestCase {
 
         // Act
         handler.values = ["key": "value"]
-        let value = try await configs.fetchIfNeeded(\.testKey)
+        let value = try await configs.fetchIfNeeded(Configs.Keys().testKey)
 
         // Assert
         XCTAssertEqual(value, "value")
@@ -188,7 +188,7 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 }
 
 private extension Configs.Keys {
-    var testKey: Key<String> {
-        Key("key", in: .default, default: "defaultValue")
+    var testKey: RWKey<String> {
+        RWKey("key", in: .default, default: "defaultValue")
     }
 }
