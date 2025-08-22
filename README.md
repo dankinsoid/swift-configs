@@ -1,168 +1,299 @@
-
 # SwiftConfigs
-SwiftConfigs is an API package which tries to establish a common API the ecosystem can use.
-To make SwiftConfigs really work for real-world workloads, we need SwiftConfigs-compatible backends which load configs from the Ri
+
+SwiftConfigs is a Swift package that provides a unified API for configuration management across different storage backends. It supports various storage options including UserDefaults, Keychain, environment variables, in-memory storage, and more, with a clean, type-safe interface.
+
+## Features
+
+- **Type-safe configuration keys** with compile-time validation
+- **Multiple storage backends** (UserDefaults, Keychain, Environment Variables, etc.)
+- **Configuration categories** for organizing different types of settings
+- **Secure Enclave support** for maximum security on supported devices
+- **Async/await support** for modern Swift concurrency
+- **Property wrapper APIs** for SwiftUI-style usage
+- **Migration utilities** for evolving configuration schemas
+- **Listening for changes** with cancellable subscriptions
 
 ## Getting Started
 
-### Let's read a config
-1. let's import the SwiftConfigs API package
+### 1. Import SwiftConfigs
+
 ```swift
 import SwiftConfigs
 ```
 
-2. let's define a key
+### 2. Define Configuration Keys
+
 ```swift
 public extension Configs.Keys {
-    var showAd: Key<Bool> { Key("show-ad", default: false) }
+    var showAds: ROKey<Bool> { ROKey("show-ads", in: .default, default: false) }
+    var apiToken: RWKey<String> { RWKey("api-token", in: .secure, default: "") }
+    var serverURL: ROKey<String> { ROKey("SERVER_URL", in: .environments, default: "https://api.example.com") }
 }
 ```
 
-3. we need to create a Configs
+### 3. Create a Configs Instance
+
 ```swift
 let configs = Configs()
 ```
 
-4. we're now ready to use it
-```swift
-let shouldShowAd = configs.showAd
-```
-
-## The core concepts
-
-### Configs
-`Configs` are used to read configs and therefore the most important type in SwiftConfigs, so their use should be as simple as possible.
-
-### Categories
-Categories allow you to save different keys in different storages without direct access to the handler. This enables you to organize your configuration data by security level, persistence requirements, or other criteria.
-
-You can bootstrap SwiftConfigs with different handlers for different categories:
+### 4. Use Your Configuration
 
 ```swift
-ConfigsSystem.bootstrap(
-    [
-        .secure: .keychain,
-        .secureSynced: .keychain(iCloudSync: true),
-        .environment: .environment,
-        .default: .userDefaults,
-        .synced: .ubiquitous,
-    ]
-)
+// Read values
+let shouldShowAds = configs.showAds
+let token = configs.apiToken
+let serverURL = configs.serverURL
+
+// Write values (for RWKey only)
+configs.apiToken = "new-token"
 ```
 
-### Available Handlers
-SwiftConfigs provides several built-in configuration handlers:
+## Configuration Categories
 
-- **`.userDefaults`** - Stores configurations in UserDefaults
-- **`.keychain`** - Stores configurations in Keychain
-- **`.keychain(iCloudSync: true)`** - Stores configurations in Keychain with iCloud sync
-- **`.environment`** - Reads configurations from environment variables (read-only)
-- **`.ubiquitous`** - Stores configurations in iCloud key-value store (Apple platforms only)
-- **`.inMemory`** - Stores configurations in memory
-- **`.noop`** - No-operation handler
-- **`.multiple(...)`** - Combines multiple handlers for different categories
-- **`.fallback(for:with:)`** - Reads from one handler with fallback to another, writes to one handler only
+SwiftConfigs organizes configuration data using categories, allowing you to store different types of settings in appropriate backends:
 
-#### Defining Keys with Categories
+```swift
+ConfigsSystem.bootstrap([
+    .default: .userDefaults,           // General app settings
+    .secure: .keychain,                // Sensitive data (tokens, passwords)
+    .secureEnclave: .secureEnclave(),  // Maximum security with biometrics
+    .syncedSecure: .keychain(iCloudSync: true), // Synced secure data
+    .environments: .environments,       // Environment variables
+    .memory: .inMemory,                // Temporary/testing data
+    .remote: .userDefaults             // Remote configuration cache
+])
+```
 
-You can define keys that automatically use specific categories by specifying the `from` parameter:
+### Built-in Categories
+
+- **`.default`** - General application settings (UserDefaults)
+- **`.secure`** - Sensitive data requiring encryption (Keychain)
+- **`.secureEnclave`** - Maximum security with hardware protection
+- **`.syncedSecure`** - Secure data synced across devices (iCloud Keychain)
+- **`.environments`** - Environment variables (read-only)
+- **`.memory`** - In-memory storage for testing
+- **`.remote`** - Remote configuration cache
+
+## Available Storage Handlers
+
+### UserDefaults
+```swift
+.userDefaults                    // Standard UserDefaults
+.userDefaults(suiteName: "group") // App group UserDefaults
+```
+
+### Keychain (iOS/macOS)
+```swift
+.keychain                        // Basic keychain storage
+.keychain(iCloudSync: true)      // iCloud Keychain sync
+.secureEnclave()                 // Secure Enclave with user presence
+.biometricSecureEnclave()        // Secure Enclave with biometrics
+.passcodeSecureEnclave()         // Secure Enclave with device passcode
+```
+
+### Other Handlers
+```swift
+.environments                    // Environment variables (read-only)
+.inMemory                        // In-memory storage
+.inMemory(["key": "value"])      // In-memory with initial values
+.noop                           // No-operation handler
+.multiple([handler1, handler2])  // Multiplex multiple handlers
+```
+
+## Property Wrapper API
+
+Use property wrappers for SwiftUI-style configuration management:
+
+```swift
+struct AppSettings {
+    @ROConfig("show-ads", in: .default)
+    var showAds: Bool = false
+    
+    @RWConfig("api-token", in: .secure) 
+    var apiToken: String = ""
+    
+    @RWConfig("user-preferences", in: .default)
+    var preferences: UserPreferences = UserPreferences()
+}
+
+let settings = AppSettings()
+print(settings.showAds)          // Read value
+settings.apiToken = "new-token"  // Write value
+```
+
+## Async/Await Support
+
+```swift
+let configs = Configs()
+
+// Fetch latest values
+try await configs.fetch()
+
+// Fetch and get specific value
+let token = try await configs.fetch(configs.apiToken)
+
+// Fetch only if needed
+let value = try await configs.fetchIfNeeded(configs.someKey)
+```
+
+## Listening for Changes
+
+```swift
+let configs = Configs()
+
+// Listen to all configuration changes
+let cancellation = configs.listen { updatedConfigs in
+    print("Configurations updated")
+}
+
+// Listen to specific key changes  
+let keyCancellation = configs.listen(configs.apiToken) { newToken in
+    print("API token changed: \(newToken)")
+}
+
+// Cancel when done
+cancellation.cancel()
+keyCancellation.cancel()
+```
+
+## Value Transformers
+
+SwiftConfigs automatically handles common types:
 
 ```swift
 public extension Configs.Keys {
-    // Uses .default category (UserDefaults)
-    var showAds: Key<Bool> { Key("show-ads", default: false) }
+    // String-convertible types
+    var count: ROKey<Int> { ROKey("count", in: .default, default: 0) }
+    var rate: ROKey<Double> { ROKey("rate", in: .default, default: 1.0) }
     
-    // Uses .secure category (Keychain)
-    var apiToken: Key<String> { Key("api-token", from: .secure, default: "") }
+    // Enum types
+    var theme: ROKey<Theme> { ROKey("theme", in: .default, default: .light) }
     
-    // Uses .environment category (Environment Variables)
-    var serverURL: Key<String> { Key("SERVER_URL", from: .environment, default: "https://api.example.com") }
+    // Codable types (stored as JSON)
+    var settings: ROKey<AppSettings> { ROKey("settings", in: .default, default: AppSettings()) }
     
-    // Uses .remote category (iCloud key-value store)
-    var userPreferences: Key<UserPreferences> { Key("user-preferences", from: .remote, default: []) }
+    // Optional types
+    var optionalValue: ROKey<String?> { ROKey("optional", in: .default, default: nil) }
+}
+```
+
+## Configuration Migration
+
+Handle configuration schema changes gracefully:
+
+```swift
+public extension Configs.Keys {
+    // Migrate from old boolean to new enum
+    var notificationStyle: ROKey<NotificationStyle> {
+        ROKey.migration(
+            from: oldNotificationsEnabled,  // ROKey<Bool>
+            to: ROKey("notification-style", in: .default, default: .none)
+        ) { oldValue in
+            oldValue ? .all : .none
+        }
+    }
     
-    // Writable key with different read/write categories
-    var userSetting: WritableKey<[Setting]> { 
-        WritableKey("user-setting", from: .remote, to: .remote, default: []) 
+    private var oldNotificationsEnabled: ROKey<Bool> {
+        ROKey("notifications-enabled", in: .default, default: false)
     }
 }
 ```
 
-When you access these keys, they automatically use the appropriate storage:
+## Custom Configuration Handlers
+
+Implement `ConfigsHandler` protocol for custom storage backends:
 
 ```swift
-let configs = Configs()
+public struct RedisConfigsHandler: ConfigsHandler {
+    public var supportWriting: Bool { true }
+    
+    public func fetch(completion: @escaping (Error?) -> Void) {
+        // Implement Redis fetch logic
+    }
+    
+    public func value(for key: String) -> String? {
+        // Implement Redis get logic
+    }
+    
+    public func writeValue(_ value: String?, for key: String) throws {
+        // Implement Redis set logic
+    }
+    
+    public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+        // Implement Redis pub/sub logic
+    }
+    
+    public func clear() throws {
+        // Implement Redis clear logic
+    }
+    
+    public func allKeys() -> Set<String>? {
+        // Implement Redis keys logic
+    }
+}
 
-// Reads from UserDefaults
-let showAds = configs.showAds
-
-// Reads from Keychain
-let token = configs.apiToken
-
-// Reads from environment variables
-let serverURL = configs.serverURL
-
-// Reads from iCloud key-value store
-let preferences = configs.userPreferences
-
-// Can read from remote, write to local
-configs.userSetting = "new value"
-```
-
-## On the implementation of a configs backend (a ConfigsHandler)
-Note: If you don't want to implement a custom configs backend, everything in this section is probably not very relevant, so please feel free to skip.
-
-To become a compatible configs backend that all SwiftConfigs consumers can use, you need to do two things: 
-1. Implement a type (usually a struct) that implements ConfigsHandler, a protocol provided by SwiftConfigs
-2. Instruct SwiftConfigs to use your configs backend implementation.
-
-Instructing SwiftConfigs to use your configs backend as the one the whole application (including all libraries) should use is very simple:
-
-```swift
-ConfigsSystem.bootstrap(MyConfigs())
-```
-
-Or with categories:
-
-```swift
+// Bootstrap with custom handler
 ConfigsSystem.bootstrap([
     .default: .userDefaults,
-    .secure: MySecureConfigs()
+    .remote: RedisConfigsHandler()
 ])
 ```
 
 ## Installation
 
-1. [Swift Package Manager](https://github.com/apple/swift-package-manager)
+### Swift Package Manager
 
-Create a `Package.swift` file.
+Add SwiftConfigs to your `Package.swift`:
+
 ```swift
 // swift-tools-version:5.7
 import PackageDescription
 
 let package = Package(
-  name: "SomeProject",
-  dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-configs.git", from: "0.10.0")
-  ],
-  targets: [
-    .target(name: "SomeProject", dependencies: ["SwiftConfigs"])
-  ]
+    name: "YourProject",
+    dependencies: [
+        .package(url: "https://github.com/dankinsoid/swift-configs.git", from: "1.0.0")
+    ],
+    targets: [
+        .target(name: "YourProject", dependencies: ["SwiftConfigs"])
+    ]
 )
 ```
-```ruby
-$ swift build
-```
 
-## Implementations
-There are a few implementations of ConfigsHandler that you can use in your application:
+Or add it through Xcode:
+1. Go to File → Add Package Dependencies
+2. Enter: `https://github.com/dankinsoid/swift-configs.git`
+3. Choose the version and add to your target
 
-- [Firebase Remote Configs](https://github.com/dankinsoid/swift-firebase-tools)
+## Best Practices
 
-## Author
+1. **Define keys in extensions** for organization and discoverability
+2. **Use appropriate categories** for different security and persistence needs
+3. **Provide sensible defaults** for all configuration keys
+4. **Use read-only keys (ROKey)** when values shouldn't be modified at runtime
+5. **Bootstrap the system early** in your app lifecycle
+6. **Handle migration** when changing configuration schemas
+7. **Use property wrappers** for clean SwiftUI integration
 
-dankinsoid, voidilov@gmail.com
+## Security Considerations
+
+- Use **`.secure`** category for sensitive data (API tokens, passwords)
+- Use **`.secureEnclave`** for maximum security on supported devices
+- **Never log** configuration values that might contain sensitive data
+- Use **`.syncedSecure`** carefully - only for data that should be shared across devices
+- **Environment variables** are read-only and visible to the process
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-swift-configs is available under the MIT license. See the LICENSE file for more info.
+SwiftConfigs is available under the MIT license. See the LICENSE file for more info.
+
+## Author
+
+**Daniil Voidilov**
+- Email: voidilov@gmail.com
+- GitHub: [@dankinsoid](https://github.com/dankinsoid)
