@@ -2,69 +2,72 @@ import Foundation
 
 public protocol ConfigWrapper<Key> {
 	
-	associatedtype Key: ConfigKey
+    associatedtype Key: ConfigKey
 	var configs: Configs { get }
 	var key: Key { get }
 	init(_ key: Key, configs: Configs)
 }
 
 public extension ConfigWrapper {
-	
+
 	init(_ key: KeyPath<Configs.Keys, Key>, configs: Configs = Configs()) {
 		self.init(Configs.Keys()[keyPath: key], configs: Configs())
 	}
-	
+
 	func exists() -> Bool {
 		configs.exists(key)
 	}
 }
-
 @propertyWrapper
-public struct Config<Value>: ConfigWrapper {
+public struct ROConfig<Value>: ConfigWrapper {
 
-	public let configs: Configs
-	public let key: Configs.Keys.Key<Value>
+    public let configs: Configs
+    public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 
-	public var wrappedValue: Key.Value {
-		configs.get(key)
-	}
-	
-	public var projectedValue: Self {
-		self
-	}
+    public var wrappedValue: Key.Value {
+        configs.get(key)
+    }
 
-	public init(_ key: Key, configs: Configs) {
-		self.key = key
-		self.configs = configs
-	}
+    public var projectedValue: Self {
+        self
+    }
+
+    public init(_ key: Key, configs: Configs) {
+        self.key = key
+        self.configs = configs
+    }
 }
 
 @propertyWrapper
-public struct WritableConfig<Value>: ConfigWrapper {
+public struct RWConfig<Value>: ConfigWrapper {
 
-	public let configs: Configs
-	public let key: Configs.Keys.WritableKey<Value>
+    public let configs: Configs
+    public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
-	public var wrappedValue: Key.Value {
-		get { configs.get(key) }
-		nonmutating set {
-			configs.set(key, newValue)
-		}
-	}
-	
-	public var projectedValue: Self {
-		self
-	}
-	
-	public init(_ key: Key, configs: Configs) {
-		self.key = key
-		self.configs = configs
-	}
-	
-	public func remove() throws {
-		try configs.remove(key)
-	}
+    public var wrappedValue: Key.Value {
+        get {
+            configs.get(key)
+        }
+        nonmutating set {
+            configs.set(key, newValue)
+        }
+    }
+
+    public var projectedValue: Self {
+        self
+    }
+
+    public init(_ key: Key, configs: Configs) {
+        self.key = key
+        self.configs = configs
+    }
 }
+
+@available(*, deprecated, renamed: "ROConfig")
+public typealias Config<Value> = ROConfig<Value>
+
+@available(*, deprecated, renamed: "RWConfig")
+public typealias WritableConfig<Value> = RWConfig<Value>
 
 public extension ConfigWrapper where Key.Value: LosslessStringConvertible {
 
@@ -205,6 +208,7 @@ public extension ConfigWrapper {
 }
 
 #if compiler(>=5.6)
-extension Config: Sendable where Value: Sendable {}
-extension WritableConfig: Sendable where Value: Sendable {}
+extension ROConfig: Sendable where Value: Sendable {}
+extension RWConfig: Sendable where Value: Sendable {}
 #endif
+

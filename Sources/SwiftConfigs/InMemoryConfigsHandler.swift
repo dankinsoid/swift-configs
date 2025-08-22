@@ -35,11 +35,6 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
         values[key]
     }
 
-    /// Sets a value using a key path
-    public func set<Value>(_ value: Value, for keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value>>) where Value: CustomStringConvertible {
-        values[Configs.Keys()[keyPath: keyPath].name] = value.description
-    }
-
     public func fetch(completion: @escaping (Error?) -> Void) {
         completion(nil)
     }
