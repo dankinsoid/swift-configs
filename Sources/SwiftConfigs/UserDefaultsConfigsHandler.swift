@@ -1,22 +1,23 @@
 import Foundation
 
-/// A ConfigsHandler implementation backed by UserDefaults
+/// Configuration handler backed by UserDefaults for persistent storage
 public final class UserDefaultsConfigsHandler: ConfigsHandler {
     private let userDefaults: UserDefaults
     private var observers: [UUID: () -> Void] = [:]
     private let lock = ReadWriteLock()
     private var notificationObserver: NSObjectProtocol?
 	
+	/// Shared standard UserDefaults configuration handler
 	public static let standard = UserDefaultsConfigsHandler()
 
-    /// Creates a UserDefaults configs handler
+    /// Creates a UserDefaults configuration handler
     /// - Parameter userDefaults: The UserDefaults instance to use
     public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         setupNotificationObserver()
     }
 
-    /// Creates a UserDefaults configs handler with a specific suite
+    /// Creates a UserDefaults configuration handler with a specific suite
     /// - Parameter suiteName: The suite name for UserDefaults
     public convenience init?(suiteName: String) {
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
@@ -48,11 +49,12 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
 
     // MARK: - ConfigsHandler Implementation
 
+    /// UserDefaults is always available, no fetching required
     public func fetch(completion: @escaping (Error?) -> Void) {
-        // UserDefaults is synchronous and always available
         completion(nil)
     }
 
+    /// Registers a listener for UserDefaults changes
     public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
         let id = UUID()
         lock.withWriterLockVoid {
@@ -66,14 +68,17 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
         }
     }
 
+    /// Retrieves a string value from UserDefaults
     public func value(for key: String) -> String? {
         userDefaults.string(forKey: key)
     }
 	
+	/// UserDefaults handler supports writing operations
 	public var supportWriting: Bool {
 		true
 	}
 
+    /// Writes a value to UserDefaults
     public func writeValue(_ value: String?, for key: String) throws {
         if let value = value {
             userDefaults.set(value, forKey: key)
@@ -82,6 +87,7 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
         }
     }
 
+    /// Clears all UserDefaults values
     public func clear() throws {
         let keys = allKeys() ?? Set()
         for key in keys {
@@ -89,6 +95,7 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
         }
     }
 
+    /// Returns all UserDefaults keys
     public func allKeys() -> Set<String>? {
         Set(userDefaults.dictionaryRepresentation().keys)
     }
@@ -99,12 +106,12 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
 #endif
 
 extension ConfigsHandler where Self == UserDefaultsConfigsHandler {
-	/// Creates a UserDefaults configs handler
+	/// Creates a standard UserDefaults configuration handler
 	public static var userDefaults: UserDefaultsConfigsHandler {
 		.standard
 	}
 
-	/// Creates a UserDefaults configs handler with a specific suite
+	/// Creates a UserDefaults configuration handler with a specific suite
 	public static func userDefaults(suiteName: String) -> UserDefaultsConfigsHandler? {
 		UserDefaultsConfigsHandler(suiteName: suiteName)
 	}

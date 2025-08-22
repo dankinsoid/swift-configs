@@ -1,29 +1,37 @@
 import Foundation
 
+/// Protocol for configuration property wrappers
 public protocol ConfigWrapper<Key> {
-	
+    /// The configuration key type
     associatedtype Key: ConfigKey
+    /// The configs instance used for operations
 	var configs: Configs { get }
+    /// The configuration key
 	var key: Key { get }
+    /// Initializes with a key and configs instance
 	init(_ key: Key, configs: Configs)
 }
 
 public extension ConfigWrapper {
 
+	/// Initializes with a key path and optional configs instance
 	init(_ key: KeyPath<Configs.Keys, Key>, configs: Configs = Configs()) {
 		self.init(Configs.Keys()[keyPath: key], configs: Configs())
 	}
 
+	/// Checks if the configuration value exists
 	func exists() -> Bool {
 		configs.exists(key)
 	}
 }
+/// Property wrapper for read-only configuration values
 @propertyWrapper
 public struct ROConfig<Value>: ConfigWrapper {
 
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 
+    /// The configuration value
     public var wrappedValue: Key.Value {
         configs.get(key)
     }
@@ -38,12 +46,14 @@ public struct ROConfig<Value>: ConfigWrapper {
     }
 }
 
+/// Property wrapper for read-write configuration values
 @propertyWrapper
 public struct RWConfig<Value>: ConfigWrapper {
 
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
+    /// The configuration value with getter and setter
     public var wrappedValue: Key.Value {
         get {
             configs.get(key)
@@ -113,12 +123,15 @@ public extension ConfigWrapper where Key.Value: RawRepresentable, Key.Value.RawV
 
 public extension ConfigWrapper where Key.Value: Codable {
 
-	/// Returns the key instance.
+	/// Creates a configuration wrapper for Codable values
 	///
 	/// - Parameters:
-	///   - key: The key string.
-	///   - default: The default value to use if the key is not found.
-	///   - decoder: The JSON decoder to use for decoding the value.
+	///   - defaultValue: The default value to use if the key is not found
+	///   - key: The key string
+	///   - category: The configuration category
+	///   - cacheDefaultValue: Whether to cache the default value when first accessed
+	///   - decoder: The JSON decoder to use for decoding values
+	///   - encoder: The JSON encoder to use for encoding values
 	@_disfavoredOverload
 	init(
 		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value,
@@ -179,12 +192,15 @@ public extension ConfigWrapper {
 		)
 	}
 
-	/// Returns the key instance.
+	/// Creates an optional configuration wrapper for Codable values
 	///
 	/// - Parameters:
-	///   - key: The key string.
-	///   - default: The default value to use if the key is not found.
-	///   - decoder: The JSON decoder to use for decoding the value.
+	///   - defaultValue: The default value to use if the key is not found
+	///   - key: The key string
+	///   - category: The configuration category
+	///   - cacheDefaultValue: Whether to cache the default value when first accessed
+	///   - decoder: The JSON decoder to use for decoding values
+	///   - encoder: The JSON encoder to use for encoding values
 	@_disfavoredOverload
 	init<T: Codable>(
 		wrappedValue defaultValue: @escaping @autoclosure () -> Key.Value = nil,

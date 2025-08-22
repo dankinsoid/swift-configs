@@ -3,7 +3,7 @@ import Foundation
 @available(*, deprecated, renamed: "ConfigsHandler")
 public typealias RemoteConfigsHandler = ConfigsHandler
 
-/// An `ConfigsHandler` is an implementation of configs backend.
+/// Protocol for implementing configuration storage backends
 ///
 /// This type is an implementation detail and should not normally be used, unless implementing your own configs backend.
 /// To use the SwiftConfigs API, please refer to the documentation of ``Configs``.
@@ -20,16 +20,18 @@ public protocol ConfigsHandler: _SwiftConfigsSendableAnalyticsHandler {
     func clear() throws
     /// Returns all available configuration keys
     func allKeys() -> Set<String>?
-	/// Indicates if the handler supports writing value.
+	/// Whether the handler supports writing operations
 	var supportWriting: Bool { get }
 }
 
 extension ConfigsHandler {
 
+	/// Retrieves and transforms a value for a given key
 	public func value<T>(for key: String, as transformer: ConfigTransformer<T>) -> T? {
 		value(for: key).flatMap(transformer.decode)
 	}
 
+	/// Transforms and writes a value for a given key
 	public func  writeValue<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
 		try writeValue(value.flatMap(transformer.encode), for: key)
 	}

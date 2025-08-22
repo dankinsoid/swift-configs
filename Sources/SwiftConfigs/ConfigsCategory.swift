@@ -1,21 +1,32 @@
 import Foundation
 
+/// Represents a configuration category for organizing configuration keys
 public struct ConfigsCategory: Hashable, CustomStringConvertible {
 
 	private let uuid = UUID()
+	/// The human-readable name of the category
 	public let description: String
 
+	/// Creates a new configuration category
 	public init(_ name: String) {
 		self.description = name
     }
 
+    /// Default configuration category using UserDefaults
     public static let `default` = ConfigsCategory("Default")
+    /// Secure configuration category using Keychain
     public static let secure = ConfigsCategory("Secure")
+    /// Secure Enclave configuration category for maximum security
     public static let secureEnclave = ConfigsCategory("Secure Enclave")
+    /// Remote configuration category for server-based configs
     public static let remote = ConfigsCategory("Remote")
+    /// Synced secure configuration category using iCloud Keychain
 	public static let syncedSecure = ConfigsCategory("Synced Secure")
+    /// General synced configuration category
 	public static let synced = ConfigsCategory("Synced")
+    /// Environment variables configuration category
 	public static let environments = ConfigsCategory("Environments")
+    /// In-memory configuration category for testing
 	public static let memory = ConfigsCategory("In Memory")
 }
 

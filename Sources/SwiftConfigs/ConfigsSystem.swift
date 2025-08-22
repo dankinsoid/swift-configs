@@ -11,7 +11,7 @@ public typealias RemoteConfigsSystem = ConfigsSystem
 /// implementation.
 public enum ConfigsSystem {
 	
-	/// The default configs backend categories.
+	/// The default configuration handlers for each category
 	public static let defaultHandlers: [ConfigsCategory: ConfigsHandler] = [
 		.default: .userDefaults,
 		.environments: .environments,
@@ -19,6 +19,7 @@ public enum ConfigsSystem {
 	]
 		.withPlatformSpecific
 	
+	/// Mock configuration handlers for testing and previews
 	public static let mockHandlers: [ConfigsCategory: ConfigsHandler] = [
 		.default: .inMemory(),
 		.environments: .inMemory(),
@@ -33,34 +34,33 @@ public enum ConfigsSystem {
 		isPreview ? mockHandlers : defaultHandlers
 	)
 	
-	/// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
-	/// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
-	/// lead to undefined behaviour, most likely a crash.
+	/// Bootstraps the configuration system with a single handler
+	/// 
+	/// This function can only be called once per program execution.
+	/// Multiple calls will lead to undefined behavior.
 	///
-	/// - parameters:
-	///     - handler: The desired configs backend implementation.
+	/// - Parameter handler: The configuration handler to use
 	public static func bootstrap(_ handler: ConfigsHandler) {
 		bootstrap([.default: handler])
 	}
 	
-	/// `bootstrap` is an one-time configuration function which globally selects the desired configs backend
-	/// implementation. `bootstrap` can be called at maximum once in any given program, calling it more than once will
-	/// lead to undefined behaviour, most likely a crash.
+	/// Bootstraps the configuration system with category-specific handlers
+	/// 
+	/// This function can only be called once per program execution.
+	/// Multiple calls will lead to undefined behavior.
 	///
-	/// - parameters:
-	///     - handler: The desired configs backend implementation.
+	/// - Parameter handlers: A dictionary mapping categories to their handlers
 	public static func bootstrap(_ handlers: [ConfigsCategory: ConfigsHandler]) {
 		_handler.replaceHandler(handlers)
 	}
 	
-	/// `defaultBootstrap` is an one-time configuration function which globally selects the desired configs backend
-	/// implementation. `defaultBootstrap` uses the default handlers and merges them with the provided handlers.
-	/// `defaultBootstrap` can be called at maximum once in any given program, calling it more than once will
-	/// lead to undefined behaviour, most likely a crash.
+	/// Bootstraps with default handlers, overriding with provided handlers
+	/// 
+	/// This function merges the provided handlers with the default ones,
+	/// with provided handlers taking precedence.
+	/// Can only be called once per program execution.
 	///
-	///
-	/// - parameters:
-	///     - handler: The desired configs backend implementation.
+	/// - Parameter handlers: Custom handlers to override defaults
 	public static func defaultBootstrap(_ handlers: [ConfigsCategory: ConfigsHandler]) {
 		_handler.replaceHandler(handlers.merging(isPreview ? mockHandlers : defaultHandlers) { new, _ in new })
 	}
@@ -82,7 +82,9 @@ public enum ConfigsSystem {
 		}
 	}
 	
+	/// The main configuration handler that manages multiple category handlers
 	public final class Handler {
+		/// Whether any handler has completed a fetch operation
 		var didFetch: Bool {
 			lock.withReaderLock {
 				_didFetch
@@ -92,6 +94,7 @@ public enum ConfigsSystem {
 		private let lock = ReadWriteLock()
 		private let handlersLock = ReadWriteLock()
 		private var _didFetch = false
+		/// The category-specific configuration handlers
 		fileprivate(set) public var handlers: [ConfigsCategory: ConfigsHandler] {
 			get { handlersLock.withReaderLock { _handlers } }
 			set { handlersLock.withWriterLockVoid { _handlers = newValue } }
@@ -102,10 +105,12 @@ public enum ConfigsSystem {
 		private var didStartFetch = false
 		private var cancellation: ConfigsCancellation?
 		
+		/// Initializes with a set of category handlers
 		public init(_ handlers: [ConfigsCategory: ConfigsHandler]) {
 			_handlers = handlers
 		}
 		
+		/// Fetches configuration values from all handlers
 		func fetch(completion: @escaping (Error?) -> Void) {
 			lock.withWriterLock {
 				didStartFetch = true
@@ -124,22 +129,27 @@ public enum ConfigsSystem {
 			}
 		}
 		
+		/// Retrieves a value from the appropriate handler
 		public func value(for key: String, in category: ConfigsCategory? = nil) -> String? {
 			handler(for: category).value(for: key)
 		}
 		
+		/// Writes a value using the appropriate handler
 		public func writeValue(_ value: String?, for key: String, in category: ConfigsCategory) throws {
 			try handler(for: category).writeValue(value, for: key)
 		}
 		
+		/// Returns all keys from the appropriate handler
 		public func allKeys(in category: ConfigsCategory? = nil) -> Set<String> {
 			handler(for: category).allKeys() ?? []
 		}
 		
+		/// Clears all values from the appropriate handler
 		public func clear(in category: ConfigsCategory? = nil) throws {
 			try handler(for: category).clear()
 		}
 		
+		/// Registers a listener for configuration changes
 		func listen(_ observer: @escaping () -> Void) -> ConfigsCancellation {
 			let didFetch = self.didFetch
 			if !didFetch, !lock.withReaderLock({ didStartFetch }) {
@@ -167,6 +177,7 @@ public enum ConfigsSystem {
 			return ConfigsCancellation { self.cancel(id: id) }
 		}
 
+		/// Gets the appropriate handler for a category
 		func handler(for category: ConfigsCategory?) -> ConfigsHandler {
 			MultiplexConfigsHandler(
 				handlers: category.map { category in handlers.compactMap { category == $0.key ? $0.value : nil } } ?? Array(handlers.values)

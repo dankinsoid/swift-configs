@@ -5,23 +5,24 @@ import Foundation
 		import UIKit
 	#endif
 
-	/// A ConfigsHandler implementation backed by iOS/macOS Keychain
+	/// Configuration handler backed by iOS/macOS Keychain for secure storage
 	public final class KeychainConfigsHandler: ConfigsHandler {
-		/// The keychain service identifier
+		/// Optional service identifier for keychain items
 		public let service: String?
-		/// The keychain security class
+		/// Security class for keychain items
 		public let secClass: SecClass
 		/// Whether to sync keychain items with iCloud
 		public let iCloudSync: Bool
+		/// Accessibility level for keychain items
 		public let attrAccessible: SecAttrAccessible
-		/// Whether to use Secure Enclave for key storage
+		/// Whether to use Secure Enclave for enhanced security
 		public let useSecureEnclave: Bool
-		/// Secure Enclave access control options
+		/// Access control options when using Secure Enclave
 		public let secureEnclaveAccessControl: SecureEnclaveAccessControl?
 		private var observers: [UUID: () -> Void] = [:]
 		private let lock = ReadWriteLock()
 
-		/// The default Keychain configs handler
+		/// Shared default keychain configuration handler
 		public static var `default` = KeychainConfigsHandler()
 
 		/// Creates a keychain configs handler
@@ -53,15 +54,18 @@ import Foundation
 			self.secureEnclaveAccessControl = secureEnclaveAccessControl
 		}
 
+		/// Retrieves a value from the keychain
 		public func value(for key: String) -> String? {
 			let (_, item, status) = loadStatus(for: key)
 			return try? load(item: item, status: status)
 		}
 
+		/// Waits for protected data to become available
 		public func fetch(completion: @escaping ((any Error)?) -> Void) {
 			waitForProtectedDataAvailable(completion: completion)
 		}
 
+		/// Registers a listener for keychain changes
 		public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
 			let id = UUID()
 			lock.withWriterLock {
@@ -74,6 +78,7 @@ import Foundation
 			}
 		}
 
+		/// Returns all keychain keys for this handler
 		public func allKeys() -> Set<String>? {
 			var query: [String: Any] = [
 				kSecReturnAttributes as String: kCFBooleanTrue!,
@@ -104,10 +109,12 @@ import Foundation
 			return keys
 		}
 		
+		/// Keychain handler supports writing operations
 		public var supportWriting: Bool { true }
 
+		/// Writes a value to the keychain
 		public func writeValue(_ value: String?, for key: String) throws {
-			// Create a query for saving the token
+			// Create a query for saving the value
 			var query: [String: Any] = [
 				kSecAttrAccount as String: key,
 			]
@@ -137,6 +144,7 @@ import Foundation
 			.forEach { $0() }
 		}
 
+		/// Clears all keychain items for this handler
 		public func clear() throws {
 			var query: [String: Any] = [:]
 			configureAccess(query: &query)
@@ -158,9 +166,11 @@ import Foundation
 			.forEach { $0() }
 		}
 		
+		/// Keychain accessibility levels
 		public struct SecAttrAccessible: RawRepresentable, CaseIterable {
 			public let rawValue: CFString
 
+			/// All available accessibility cases
 			public static var allCases: [SecAttrAccessible] {
 				[.whenUnlocked, .afterFirstUnlock, .always, .whenUnlockedThisDeviceOnly]
 			}
@@ -179,10 +189,11 @@ import Foundation
 			public static let whenUnlockedThisDeviceOnly = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
 		}
 
-		/// Secure Enclave access control options
+		/// Access control options for Secure Enclave operations
 		public struct SecureEnclaveAccessControl: RawRepresentable, CaseIterable {
 			public let rawValue: SecAccessControlCreateFlags
 
+			/// All available access control cases
 			public static var allCases: [SecureEnclaveAccessControl] {
 				var cases: [SecureEnclaveAccessControl] = [.userPresence, .devicePasscode, .privateKeyUsage]
 				#if os(iOS)
@@ -221,10 +232,11 @@ import Foundation
 			#endif
 		}
 
-		/// Keychain security class options
+		/// Keychain security class types
 		public struct SecClass: RawRepresentable, CaseIterable {
 			public let rawValue: CFString
 
+			/// All available security classes
 			public static var allCases: [SecClass] {
 				[.genericPassowrd, .internetPassword, .certificate, .key, .identity]
 			}
