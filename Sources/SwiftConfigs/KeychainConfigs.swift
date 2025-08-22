@@ -14,6 +14,10 @@ import Foundation
 		/// Whether to sync keychain items with iCloud
 		public let iCloudSync: Bool
 		public let attrAccessible: SecAttrAccessible
+		/// Whether to use Secure Enclave for key storage
+		public let useSecureEnclave: Bool
+		/// Secure Enclave access control options
+		public let secureEnclaveAccessControl: SecureEnclaveAccessControl?
 		private var observers: [UUID: () -> Void] = [:]
 		private let lock = ReadWriteLock()
 
@@ -25,16 +29,28 @@ import Foundation
 		///   - service: Optional service identifier for keychain items
 		///   - secClass: Security class for keychain items
 		///   - iCloudSync: Whether to enable iCloud Keychain synchronization
+		///   - useSecureEnclave: Whether to use Secure Enclave for key storage
+		///   - secureEnclaveAccessControl: Secure Enclave access control options
+		/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
 		public init(
 			service: String? = nil,
 			class secClass: SecClass = .genericPassowrd,
 			attrAccessible: SecAttrAccessible = .afterFirstUnlock,
-			iCloudSync: Bool = false
+			iCloudSync: Bool = false,
+			useSecureEnclave: Bool = false,
+			secureEnclaveAccessControl: SecureEnclaveAccessControl? = nil
 		) {
+			// Validate that iCloud sync and Secure Enclave are not used together
+			if iCloudSync && useSecureEnclave {
+				fatalError("iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.")
+			}
+			
 			self.service = service
 			self.secClass = secClass
 			self.iCloudSync = iCloudSync
 			self.attrAccessible = attrAccessible
+			self.useSecureEnclave = useSecureEnclave
+			self.secureEnclaveAccessControl = secureEnclaveAccessControl
 		}
 
 		public func value(for key: String) -> String? {
@@ -163,6 +179,48 @@ import Foundation
 			public static let whenUnlockedThisDeviceOnly = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
 		}
 
+		/// Secure Enclave access control options
+		public struct SecureEnclaveAccessControl: RawRepresentable, CaseIterable {
+			public let rawValue: SecAccessControlCreateFlags
+
+			public static var allCases: [SecureEnclaveAccessControl] {
+				var cases: [SecureEnclaveAccessControl] = [.userPresence, .devicePasscode, .privateKeyUsage]
+				#if os(iOS)
+				cases.append(contentsOf: [.biometryAny, .biometryCurrentSet])
+				#elseif os(macOS)
+				if #available(macOS 10.13.4, *) {
+					cases.append(contentsOf: [.biometryAny, .biometryCurrentSet])
+				}
+				#endif
+				return cases
+			}
+
+			public init(rawValue: SecAccessControlCreateFlags) {
+				self.rawValue = rawValue
+			}
+
+			/// Requires user presence (Touch ID, Face ID, or device passcode)
+			public static let userPresence = SecureEnclaveAccessControl(rawValue: .userPresence)
+			/// Requires device passcode
+			public static let devicePasscode = SecureEnclaveAccessControl(rawValue: .devicePasscode)
+			/// Allows private key usage
+			public static let privateKeyUsage = SecureEnclaveAccessControl(rawValue: .privateKeyUsage)
+			
+			#if os(iOS)
+			/// Requires any biometric authentication
+			public static let biometryAny = SecureEnclaveAccessControl(rawValue: .biometryAny)
+			/// Requires current biometric set
+			public static let biometryCurrentSet = SecureEnclaveAccessControl(rawValue: .biometryCurrentSet)
+			#elseif os(macOS)
+			@available(macOS 10.13.4, *)
+			/// Requires any biometric authentication
+			public static let biometryAny = SecureEnclaveAccessControl(rawValue: .biometryAny)
+			@available(macOS 10.13.4, *)
+			/// Requires current biometric set
+			public static let biometryCurrentSet = SecureEnclaveAccessControl(rawValue: .biometryCurrentSet)
+			#endif
+		}
+
 		/// Keychain security class options
 		public struct SecClass: RawRepresentable, CaseIterable {
 			public let rawValue: CFString
@@ -239,11 +297,39 @@ import Foundation
 				query[kSecAttrService as String] = service
 			}
 
+			// Configure Secure Enclave if enabled
+			if useSecureEnclave {
+				configureSecureEnclave(query: &query)
+			}
+
 			#if os(macOS)
 				if #available(macOS 10.15, *) {
 					query[kSecUseDataProtectionKeychain as String] = true
 				}
 			#endif
+		}
+
+		private func configureSecureEnclave(query: inout [String: Any]) {
+			// Set the token ID to use Secure Enclave
+			query[kSecAttrTokenID as String] = kSecAttrTokenIDSecureEnclave
+
+			// Configure access control if specified
+			if let accessControl = secureEnclaveAccessControl {
+				var error: Unmanaged<CFError>?
+				let secAccessControl = SecAccessControlCreateWithFlags(
+					kCFAllocatorDefault,
+					kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+					accessControl.rawValue,
+					&error
+				)
+				
+				if let secAccessControl = secAccessControl {
+					query[kSecAttrAccessControl as String] = secAccessControl
+				} else if let error = error {
+					// Log error but continue without access control
+					print("Failed to create access control for Secure Enclave: \(error.takeRetainedValue())")
+				}
+			}
 		}
 	}
 
@@ -317,13 +403,78 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 	///  - service: Optional service identifier for keychain items
 	///  - secClass: Security class for keychain items
 	///  - iCloudSync: Whether to enable iCloud Keychain synchronization
+	///  - useSecureEnclave: Whether to use Secure Enclave for key storage
+	///  - secureEnclaveAccessControl: Secure Enclave access control options
+	/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
 	public static func keychain(
 		service: String? = nil,
 		class secClass: KeychainConfigsHandler.SecClass = .genericPassowrd,
 		attrAccessible: KeychainConfigsHandler.SecAttrAccessible = .afterFirstUnlock,
-		iCloudSync: Bool = false
+		iCloudSync: Bool = false,
+		useSecureEnclave: Bool = false,
+		secureEnclaveAccessControl: KeychainConfigsHandler.SecureEnclaveAccessControl? = nil
 	) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(service: service, class: secClass, attrAccessible: attrAccessible, iCloudSync: iCloudSync)
+		KeychainConfigsHandler(
+			service: service, 
+			class: secClass, 
+			attrAccessible: attrAccessible, 
+			iCloudSync: iCloudSync,
+			useSecureEnclave: useSecureEnclave,
+			secureEnclaveAccessControl: secureEnclaveAccessControl
+		)
+	}
+	
+	/// Creates a Secure Enclave Keychain configs handler with user presence requirement
+	/// - Parameters:
+	///  - service: Optional service identifier for keychain items
+	///  - accessControl: Secure Enclave access control options (defaults to user presence)
+	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	public static func secureEnclave(
+		service: String? = nil,
+		accessControl: KeychainConfigsHandler.SecureEnclaveAccessControl = .userPresence
+	) -> KeychainConfigsHandler {
+		KeychainConfigsHandler(
+			service: service,
+			useSecureEnclave: true,
+			secureEnclaveAccessControl: accessControl
+		)
+	}
+	
+	/// Creates a Secure Enclave Keychain configs handler with biometric authentication
+	/// - Parameters:
+	///  - service: Optional service identifier for keychain items
+	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	#if os(iOS)
+	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
+		KeychainConfigsHandler(
+			service: service,
+			useSecureEnclave: true,
+			secureEnclaveAccessControl: .biometryAny
+		)
+	}
+	#elseif os(macOS)
+	@available(macOS 10.13.4, *)
+	/// Creates a Secure Enclave Keychain configs handler with biometric authentication
+	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
+		KeychainConfigsHandler(
+			service: service,
+			useSecureEnclave: true,
+			secureEnclaveAccessControl: .biometryAny
+		)
+	}
+	#endif
+	
+	/// Creates a Secure Enclave Keychain configs handler with device passcode requirement
+	/// - Parameters:
+	///  - service: Optional service identifier for keychain items
+	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	public static func passcodeSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
+		KeychainConfigsHandler(
+			service: service,
+			useSecureEnclave: true,
+			secureEnclaveAccessControl: .devicePasscode
+		)
 	}
 }
 #endif

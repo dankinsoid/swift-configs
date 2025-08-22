@@ -11,6 +11,7 @@ public struct ConfigsCategory: Hashable, CustomStringConvertible {
 
     public static let `default` = ConfigsCategory("Default")
     public static let secure = ConfigsCategory("Secure")
+    public static let secureEnclave = ConfigsCategory("Secure Enclave")
     public static let remote = ConfigsCategory("Remote")
 	public static let syncedSecure = ConfigsCategory("Synced Secure")
 	public static let synced = ConfigsCategory("Synced")

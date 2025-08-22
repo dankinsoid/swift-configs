@@ -24,6 +24,7 @@ public enum ConfigsSystem {
 		.environments: .inMemory(),
 		.memory: .inMemory(),
 		.secure: .inMemory(),
+		.secureEnclave: .inMemory(),
 		.syncedSecure: .inMemory(),
 		.remote: .inMemory()
 	]
@@ -198,6 +199,7 @@ private extension [ConfigsCategory: ConfigsHandler] {
         var handlers = self
         #if canImport(Security)
             handlers[.secure] = .keychain
+            handlers[.secureEnclave] = .keychain(useSecureEnclave: true, secureEnclaveAccessControl: .userPresence)
 			handlers[.syncedSecure] = .keychain(iCloudSync: true)
         #endif
         return handlers
