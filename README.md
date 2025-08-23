@@ -152,6 +152,8 @@ let value = try await configs.fetchIfNeeded(configs.someKey)
 
 ## Listening for Changes
 
+### Callback-based Listening
+
 ```swift
 let configs = Configs()
 
@@ -168,6 +170,36 @@ let keyCancellation = configs.listen(\.apiToken) { newToken in
 // Cancel when done
 cancellation.cancel()
 keyCancellation.cancel()
+```
+
+### Async Sequence-based Listening
+
+```swift
+let configs = Configs()
+
+// Listen to all configuration changes using async sequences
+for await updatedConfigs in configs.changes() {
+    print("Configurations updated")
+}
+
+// Listen to specific key changes using async sequences
+for await newToken in configs.changes(for: \.apiToken) {
+    print("API token changed: \(newToken)")
+}
+
+// Use in async context with cancellation
+let task = Task {
+    for await newToken in configs.changes(for: \.apiToken) {
+        print("API token changed: \(newToken)")
+        // Break on specific condition
+        if newToken == "expected-token" {
+            break
+        }
+    }
+}
+
+// Cancel the task when needed
+task.cancel()
 ```
 
 ## Value Transformers
