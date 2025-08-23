@@ -91,7 +91,7 @@ ConfigsSystem.bootstrap([
 
 ### UserDefaults
 ```swift
-.userDefaults                    // Standard UserDefaults
+.userDefaults                     // Standard UserDefaults
 .userDefaults(suiteName: "group") // App group UserDefaults
 ```
 
@@ -121,12 +121,12 @@ Use property wrappers for inline configuration management:
 ```swift
 struct AppSettings {
 
-    @ROConfig(\.userID) var userID
+    @ReadOnlyConfig(\.userID) var userID
     
-    @RWConfig("api-token", in: .secure) 
+    @ReadWriteConfig("api-token", in: .secure) 
     var apiToken: String?
     
-    @RWConfig("user-preferences", in: .default)
+    @ReadWriteConfig("user-preferences", in: .default)
     var preferences: UserPreferences = UserPreferences()
 }
 

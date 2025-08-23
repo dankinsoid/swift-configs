@@ -5,7 +5,7 @@ public protocol ConfigWrapper<Value> {
     associatedtype Value
     /// The configuration key permission type
     associatedtype Permission: ConfigKeyPermission
-    
+
     typealias Key = Configs.Keys.Key<Value, Permission>
     /// The configs instance used for operations
     var configs: Configs { get }
@@ -29,7 +29,7 @@ public extension ConfigWrapper {
 
 /// Property wrapper for read-only configuration values
 @propertyWrapper
-public struct ROConfig<Value>: ConfigWrapper {
+public struct ReadOnlyConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 
@@ -50,7 +50,7 @@ public struct ROConfig<Value>: ConfigWrapper {
 
 /// Property wrapper for read-write configuration values
 @propertyWrapper
-public struct RWConfig<Value>: ConfigWrapper {
+public struct ReadWriteConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
@@ -79,11 +79,11 @@ public struct RWConfig<Value>: ConfigWrapper {
     }
 }
 
-@available(*, deprecated, renamed: "ROConfig")
-public typealias Config<Value> = ROConfig<Value>
+@available(*, deprecated, renamed: "ReadOnlyConfig")
+public typealias Config<Value> = ReadOnlyConfig<Value>
 
-@available(*, deprecated, renamed: "RWConfig")
-public typealias WritableConfig<Value> = RWConfig<Value>
+@available(*, deprecated, renamed: "ReadWriteConfig")
+public typealias WritableConfig<Value> = ReadWriteConfig<Value>
 
 public extension ConfigWrapper where Value: LosslessStringConvertible {
     init(
@@ -226,6 +226,6 @@ public extension ConfigWrapper {
 }
 
 #if compiler(>=5.6)
-    extension ROConfig: Sendable where Value: Sendable {}
-    extension RWConfig: Sendable where Value: Sendable {}
+    extension ReadOnlyConfig: Sendable where Value: Sendable {}
+    extension ReadWriteConfig: Sendable where Value: Sendable {}
 #endif
