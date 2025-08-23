@@ -7,11 +7,10 @@ SwiftConfigs is a Swift package that provides a unified API for configuration ma
 - **Type-safe configuration keys** with compile-time validation
 - **Multiple storage backends** (UserDefaults, Keychain, Environment Variables, etc.)
 - **Configuration categories** for organizing different types of settings
-- **Secure Enclave support** for maximum security on supported devices
-- **Async/await support** for modern Swift concurrency
 - **Property wrapper APIs** for SwiftUI-style usage
 - **Migration utilities** for evolving configuration schemas
 - **Listening for changes** with cancellable subscriptions
+- **Secure Enclave support** for maximum security on supported devices
 
 ## Getting Started
 
@@ -207,40 +206,86 @@ public extension Configs.Keys {
 Implement `ConfigsHandler` protocol for custom storage backends:
 
 ```swift
-public struct RedisConfigsHandler: ConfigsHandler {
-    public var supportWriting: Bool { true }
+public struct FirebaseRemoteConfigHandler: ConfigsHandler {
+    public var supportWriting: Bool { false } // Remote configs are typically read-only
     
     public func fetch(completion: @escaping (Error?) -> Void) {
-        // Implement Redis fetch logic
+        // Fetch latest configs from Firebase
+        RemoteConfig.remoteConfig().fetch { status, error in
+            if status == .success {
+                RemoteConfig.remoteConfig().activate()
+            }
+            completion(error)
+        }
     }
     
     public func value(for key: String) -> String? {
-        // Implement Redis get logic
+        // Get value from Firebase Remote Config
+        return RemoteConfig.remoteConfig().configValue(forKey: key).stringValue
     }
     
     public func writeValue(_ value: String?, for key: String) throws {
-        // Implement Redis set logic
+        // Remote configs don't support writing
+        throw ConfigError.unsupportedOperation
     }
     
     public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
-        // Implement Redis pub/sub logic
+        // Set up real-time config updates listener
+        // Implementation depends on Firebase SDK capabilities
+        return nil
     }
     
     public func clear() throws {
-        // Implement Redis clear logic
+        throw ConfigError.unsupportedOperation
     }
     
     public func allKeys() -> Set<String>? {
-        // Implement Redis keys logic
+        // Return all available Firebase Remote Config keys
+        return Set(RemoteConfig.remoteConfig().allKeys(from: .remote))
+    }
+    
+    private enum ConfigError: Error {
+        case unsupportedOperation
     }
 }
 
-// Bootstrap with custom handler
+// Bootstrap with Firebase Remote Config
 ConfigsSystem.bootstrap([
     .default: .userDefaults,
-    .remote: RedisConfigsHandler()
+    .remote: FirebaseRemoteConfigHandler()
 ])
 ```
+
+## Available Implementations
+
+There are several ready-to-use ConfigsHandler implementations:
+
+### Firebase Remote Config
+- **Repository**: [swift-firebase-tools](https://github.com/dankinsoid/swift-firebase-tools)
+- **Features**: Remote configuration management, A/B testing, real-time updates
+- **Use case**: Server-controlled feature flags and configuration values
+
+```swift
+// Add to Package.swift
+.package(url: "https://github.com/dankinsoid/swift-firebase-tools.git", from: "0.3.0")
+
+// Usage
+import FirebaseConfigs
+
+ConfigsSystem.bootstrap([
+    .default: .userDefaults,
+    .remote: .firebaseRemoteConfig
+])
+```
+
+### Community Contributions
+
+Want to add your own ConfigsHandler implementation? Consider contributing to the ecosystem by:
+
+1. Creating a separate package with your handler
+2. Following the `ConfigsHandler` protocol
+3. Adding comprehensive tests and documentation
+4. Submitting your package for inclusion in this list
 
 ## Installation
 

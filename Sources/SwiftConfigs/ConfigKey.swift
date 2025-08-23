@@ -6,6 +6,18 @@ public protocol ConfigKeyPermission {
     static var supportWriting: Bool { get }
 }
 
+func tt(key: Configs.Keys.Key<Int, Configs.Keys.ReadOnly>) {
+    
+    Configs.Keys.ReadOnly<Int>
+    Configs.Keys.ReadWrite<Int>
+    
+    ReadOnlyConfigKey<Int>
+    ReadWriteConfigKey<Int>
+}
+
+public typealias ReadOnlyConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
+public typealias ReadWriteConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
+
 extension Configs {
 
     public struct Keys {
