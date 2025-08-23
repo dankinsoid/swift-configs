@@ -203,62 +203,11 @@ public extension Configs.Keys {
 
 ## Custom Configuration Handlers
 
-Implement `ConfigsHandler` protocol for custom storage backends:
-
-```swift
-public struct FirebaseRemoteConfigHandler: ConfigsHandler {
-    public var supportWriting: Bool { false } // Remote configs are typically read-only
-    
-    public func fetch(completion: @escaping (Error?) -> Void) {
-        // Fetch latest configs from Firebase
-        RemoteConfig.remoteConfig().fetch { status, error in
-            if status == .success {
-                RemoteConfig.remoteConfig().activate()
-            }
-            completion(error)
-        }
-    }
-    
-    public func value(for key: String) -> String? {
-        // Get value from Firebase Remote Config
-        return RemoteConfig.remoteConfig().configValue(forKey: key).stringValue
-    }
-    
-    public func writeValue(_ value: String?, for key: String) throws {
-        // Remote configs don't support writing
-        throw ConfigError.unsupportedOperation
-    }
-    
-    public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
-        // Set up real-time config updates listener
-        // Implementation depends on Firebase SDK capabilities
-        return nil
-    }
-    
-    public func clear() throws {
-        throw ConfigError.unsupportedOperation
-    }
-    
-    public func allKeys() -> Set<String>? {
-        // Return all available Firebase Remote Config keys
-        return Set(RemoteConfig.remoteConfig().allKeys(from: .remote))
-    }
-    
-    private enum ConfigError: Error {
-        case unsupportedOperation
-    }
-}
-
-// Bootstrap with Firebase Remote Config
-ConfigsSystem.bootstrap([
-    .default: .userDefaults,
-    .remote: FirebaseRemoteConfigHandler()
-])
-```
+You can create custom storage backends by implementing the `ConfigsHandler` protocol. See the protocol documentation for detailed implementation examples.
 
 ## Available Implementations
 
-There are several ready-to-use ConfigsHandler implementations:
+There is a ready-to-use ConfigsHandler implementation:
 
 ### Firebase Remote Config
 - **Repository**: [swift-firebase-tools](https://github.com/dankinsoid/swift-firebase-tools)
