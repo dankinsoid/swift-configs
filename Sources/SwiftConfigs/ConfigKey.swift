@@ -6,71 +6,6 @@ public protocol ConfigKeyPermission {
     static var supportWriting: Bool { get }
 }
 
-/// Protocol that defines a configuration key with associated value type and permissions
-public protocol ConfigKey<Value> {
-    /// The type of value stored by this key
-    associatedtype Value
-    /// The permission type for this key (ReadOnly or ReadWrite)
-    associatedtype Permission: ConfigKeyPermission
-    /// The unique identifier for this configuration key
-    var name: String { get }
-    /// Gets the value from the handler
-    func get(handler: ConfigsSystem.Handler) -> Value
-    /// Sets a new value using the handler
-    func set(handler: ConfigsSystem.Handler, _ newValue: Value)
-    /// Removes the value from the handler
-    func remove(handler: ConfigsSystem.Handler) throws
-    /// Checks if the value exists in the handler
-    func exists(handler: ConfigsSystem.Handler) -> Bool
-    /// Registers a listener for value changes
-    func listen(handler: ConfigsSystem.Handler, _ observer: @escaping (Value) -> Void) -> ConfigsCancellation
-    
-    init(
-        _ key: String,
-        get: @escaping (ConfigsSystem.Handler) -> Value,
-        set: @escaping (ConfigsSystem.Handler, Value) -> Void,
-        remove: @escaping (ConfigsSystem.Handler) throws -> Void,
-        exists: @escaping (ConfigsSystem.Handler) -> Bool,
-        listen: @escaping (ConfigsSystem.Handler, @escaping (Value) -> Void) -> ConfigsCancellation
-    )
-}
-
-extension ConfigKey {
-
-    public init(
-        _ name: String,
-        handler: @escaping (ConfigsSystem.Handler) -> ConfigsHandler,
-        as transformer: ConfigTransformer<Value>,
-        default defaultValue: @escaping @autoclosure () -> Value,
-        cacheDefaultValue: Bool
-    ) {
-        self.init(name) { h in
-            if let value = handler(h).value(for: name), let decoded = (value as? Value) ?? transformer.decode(value.description) {
-                return decoded
-            }
-            let result = defaultValue()
-            if cacheDefaultValue, let value = transformer.encode(result) {
-                try? handler(h).writeValue(value, for: name)
-            }
-            return result
-        } set: { h, newValue in
-            if let value = transformer.encode(newValue) {
-                try? handler(h).writeValue(value, for: name)
-            }
-        } remove: { h in
-            try handler(h).writeValue(nil, for: name)
-        } exists: { h in
-            handler(h).value(for: name) != nil
-        } listen: { h, observer in
-            let cancellation = handler(h).listen { [weak h] in
-                guard let h else { return }
-                observer(handler(h).value(for: name, as: transformer) ?? defaultValue())
-            }
-            return cancellation ?? ConfigsCancellation {}
-        }
-    }
-}
-
 extension Configs {
 
     public struct Keys {
@@ -90,7 +25,7 @@ extension Configs {
         }
 
         /// A concrete implementation of ConfigKey with specified value type and permission
-        public struct Key<Value, Permission: ConfigKeyPermission>: ConfigKey {
+        public struct Key<Value, Permission: ConfigKeyPermission> {
             
             public let name: String
             private let _get: (ConfigsSystem.Handler) -> Value
@@ -136,18 +71,43 @@ extension Configs {
                 _listen(handler, observer)
             }
         }
-        
-        /// Shorthand for read-only configuration keys
-        public typealias ROKey<Value> = Key<Value, ReadOnly>
-        /// Shorthand for read-write configuration keys
-        public typealias RWKey<Value> = Key<Value, ReadWrite>
-        
-        @available(*, deprecated, renamed: "RWKey")
-        public typealias WritableKey<Value> = Key<Value, ReadWrite>
     }
 }
 
-public extension ConfigKey {
+public extension Configs.Keys.Key {
+
+    init(
+        _ name: String,
+        handler: @escaping (ConfigsSystem.Handler) -> ConfigsHandler,
+        as transformer: ConfigTransformer<Value>,
+        default defaultValue: @escaping @autoclosure () -> Value,
+        cacheDefaultValue: Bool
+    ) {
+        self.init(name) { h in
+            if let value = handler(h).value(for: name), let decoded = (value as? Value) ?? transformer.decode(value.description) {
+                return decoded
+            }
+            let result = defaultValue()
+            if cacheDefaultValue, let value = transformer.encode(result) {
+                try? handler(h).writeValue(value, for: name)
+            }
+            return result
+        } set: { h, newValue in
+            if let value = transformer.encode(newValue) {
+                try? handler(h).writeValue(value, for: name)
+            }
+        } remove: { h in
+            try handler(h).writeValue(nil, for: name)
+        } exists: { h in
+            handler(h).value(for: name) != nil
+        } listen: { h, observer in
+            let cancellation = handler(h).listen { [weak h] in
+                guard let h else { return }
+                observer(handler(h).value(for: name, as: transformer) ?? defaultValue())
+            }
+            return cancellation ?? ConfigsCancellation {}
+        }
+    }
 
     /// Creates a configuration key with a specific handler and transformer
     init(

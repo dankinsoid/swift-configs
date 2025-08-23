@@ -17,12 +17,12 @@ public struct Configs {
 	}
 
     /// Dynamic member lookup for read-only config keys
-    public subscript<Key: ConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value where Key.Permission == Configs.Keys.ReadOnly {
+    public subscript<Value>(dynamicMember keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadOnly>>) -> Value {
 		self.get(keyPath)
 	}
 
     /// Dynamic member lookup for read-write config keys
-    public subscript<Key: ConfigKey>(dynamicMember keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value where Key.Permission == Configs.Keys.ReadWrite {
+    public subscript<Value>(dynamicMember keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadWrite>>) -> Value {
 		get {
 			get(keyPath)
 		}
@@ -32,50 +32,50 @@ public struct Configs {
 	}
 
 	/// Gets a configuration value using a key path
-	public func get<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) -> Key.Value {
+    public func get<Value, P: ConfigKeyPermission>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) -> Value {
 		get(Keys()[keyPath: keyPath])
 	}
 
 	/// Gets a configuration value using a config key
-	public func get<Key: ConfigKey>(_ key: Key) -> Key.Value {
-		if let overwrittenValue = values[key.name], let result = overwrittenValue as? Key.Value {
+	public func get<Value, P: ConfigKeyPermission>(_ key: Configs.Keys.Key<Value, P>) -> Value {
+		if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {
 			return result
 		}
         return key.get(handler: handler)
 	}
 
 	/// Sets a configuration value using a config key
-	public func set<Key: ConfigKey>(_ key: Key, _ newValue: Key.Value) where Key.Permission == Configs.Keys.ReadWrite {
+    public func set<Value>(_ key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>, _ newValue: Value) {
         key.set(handler: handler, newValue)
 	}
 
 	/// Sets a configuration value using a key path
-	public func set<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>, _ newValue: Key.Value) where Key.Permission == Configs.Keys.ReadWrite {
+	public func set<Value>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadWrite>>, _ newValue: Value) {
 		let key = Keys()[keyPath: keyPath]
 		set(key, newValue)
 	}
 
 	/// Removes a configuration value using a key path
-	public func remove<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) throws where Key.Permission == Configs.Keys.ReadWrite {
+	public func remove<Value>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadWrite>>) throws {
 		let key = Keys()[keyPath: keyPath]
 		try remove(key)
 	}
 
 	/// Removes a configuration value using a config key
-	public func remove<Key: ConfigKey>(_ key: Key) throws where Key.Permission == Configs.Keys.ReadWrite {
+	public func remove<Value>(_ key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>) throws {
         try key.remove(handler: handler)
 	}
 
 	/// Checks if a configuration value exists using a key path
-	public func exists<Key: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, Key>) -> Bool {
+    public func exists<Value, P: ConfigKeyPermission>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) -> Bool {
 		let key = Keys()[keyPath: keyPath]
 		return exists(key)
 	}
 
 	/// Checks if a configuration value exists using a config key
-	public func exists<Key: ConfigKey>(_ key: Key) -> Bool {
+	public func exists<Value, P: ConfigKeyPermission>(_ key: Configs.Keys.Key<Value, P>) -> Bool {
 		if let overwrittenValue = values[key.name] {
-			return overwrittenValue is Key.Value
+			return overwrittenValue is Value
 		}
         return key.exists(handler: handler)
 	}
@@ -112,7 +112,7 @@ public extension Configs {
 	/// - Parameters:
 	///   - key: The key to overwrite.
 	///   - value: The value to set.
-	func with<T: ConfigKey>(_ key: KeyPath<Configs.Keys, T>, _ value: T.Value?) -> Self {
+	func with<Value, P: ConfigKeyPermission>(_ key: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ value: Value?) -> Self {
 		var copy = self
 		copy.values[Keys()[keyPath: key].name] = value
 		return copy
@@ -127,36 +127,36 @@ public extension Configs {
 
 	/// Fetches if needed and returns the value for a specific key
 	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-	func fetchIfNeeded<T: ConfigKey>(_ key: T) async throws -> T.Value {
+	func fetchIfNeeded<Value, P: ConfigKeyPermission>(_ key: Configs.Keys.Key<Value, P>) async throws -> Value {
 		try await fetchIfNeeded()
         return get(key)
 	}
 
 	/// Fetches configuration values and returns the value for a specific key
 	@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetch<T: ConfigKey>(_ key: T) async throws -> T.Value {
+    func fetch<Value, P: ConfigKeyPermission>(_ key: Configs.Keys.Key<Value, P>) async throws -> Value {
 		try await fetch()
         return get(key)
 	}
 
     /// Fetches if needed and returns the value for a specific key path
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetchIfNeeded<T: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, T>) async throws -> T.Value {
+    func fetchIfNeeded<Value, P: ConfigKeyPermission>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) async throws -> Value {
         try await fetchIfNeeded(Keys()[keyPath: keyPath])
     }
 
     /// Fetches configuration values and returns the value for a specific key path
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetch<T: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, T>) async throws -> T.Value {
+    func fetch<Value, P: ConfigKeyPermission>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) async throws -> Value {
         try await fetch(Keys()[keyPath: keyPath])
     }
 
 	/// Registers a listener for changes to a specific configuration key
 	@discardableResult
-	func listen<T: ConfigKey>(_ key: T, _ observer: @escaping (T.Value) -> Void) -> ConfigsCancellation {
+	func listen<Value, P: ConfigKeyPermission>(_ key: Configs.Keys.Key<Value, P>, _ observer: @escaping (Value) -> Void) -> ConfigsCancellation {
 		let overriden = values[key.name]
         return key.listen(handler: handler) { [overriden] value in
-            if let overriden, let result = overriden as? T.Value {
+            if let overriden, let result = overriden as? Value {
                 observer(result)
                 return
             }
@@ -166,7 +166,7 @@ public extension Configs {
 
 	/// Registers a listener for changes to a specific configuration key path
 	@discardableResult
-	func listen<T: ConfigKey>(_ keyPath: KeyPath<Configs.Keys, T>, _ observer: @escaping (T.Value) -> Void) -> ConfigsCancellation {
+	func listen<Value, P: ConfigKeyPermission>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ observer: @escaping (Value) -> Void) -> ConfigsCancellation {
 		let key = Keys()[keyPath: keyPath]
 		return listen(key, observer)
 	}

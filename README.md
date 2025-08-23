@@ -25,11 +25,13 @@ import SwiftConfigs
 
 ```swift
 public extension Configs.Keys {
-    var showAds: ROKey<Bool> { ROKey("show-ads", in: .default, default: false) }
-    var apiToken: RWKey<String> { RWKey("api-token", in: .secure, default: "") }
-    var serverURL: ROKey<String> { ROKey("SERVER_URL", in: .environments, default: "https://api.example.com") }
+    var showAds: Key<Bool, ReadOnly> { Key("show-ads", in: .default, default: false) }
+    var apiToken: Key<String, ReadWrite> { Key("api-token", in: .secure, default: "") }
+    var serverURL: Key<String, ReadOnly> { Key("SERVER_URL", in: .environments, default: "https://api.example.com") }
 }
 ```
+
+> **Note**: The full `Key<Value, Permission>` syntax is now used instead of the previous `ROKey` and `RWKey` type aliases for better clarity and explicitness.
 
 ### 3. Create a Configs Instance
 
@@ -45,7 +47,7 @@ let shouldShowAds = configs.showAds
 let token = configs.apiToken
 let serverURL = configs.serverURL
 
-// Write values (for RWKey only)
+// Write values (for ReadWrite Key only)
 configs.apiToken = "new-token"
 ```
 
@@ -164,17 +166,17 @@ SwiftConfigs automatically handles common types:
 ```swift
 public extension Configs.Keys {
     // String-convertible types
-    var count: ROKey<Int> { ROKey("count", in: .default, default: 0) }
-    var rate: ROKey<Double> { ROKey("rate", in: .default, default: 1.0) }
+    var count: Key<Int, ReadOnly> { Key("count", in: .default, default: 0) }
+    var rate: Key<Double, ReadOnly> { Key("rate", in: .default, default: 1.0) }
     
     // Enum types
-    var theme: ROKey<Theme> { ROKey("theme", in: .default, default: .light) }
+    var theme: Key<Theme, ReadOnly> { Key("theme", in: .default, default: .light) }
     
     // Codable types (stored as JSON)
-    var settings: ROKey<AppSettings> { ROKey("settings", in: .default, default: AppSettings()) }
+    var settings: Key<AppSettings, ReadOnly> { Key("settings", in: .default, default: AppSettings()) }
     
     // Optional types
-    var optionalValue: ROKey<String?> { ROKey("optional", in: .default, default: nil) }
+    var optionalValue: Key<String?, ReadOnly> { Key("optional", in: .default, default: nil) }
 }
 ```
 
@@ -185,17 +187,17 @@ Handle configuration schema changes gracefully:
 ```swift
 public extension Configs.Keys {
     // Migrate from old boolean to new enum
-    var notificationStyle: ROKey<NotificationStyle> {
-        ROKey.migration(
-            from: oldNotificationsEnabled,  // ROKey<Bool>
-            to: ROKey("notification-style", in: .default, default: .none)
+    var notificationStyle: Key<NotificationStyle, ReadOnly> {
+        Key.migraion(
+            from: oldNotificationsEnabled,
+            to: Key("notification-style", in: .default, default: .none)
         ) { oldValue in
             oldValue ? .all : .none
         }
     }
     
-    private var oldNotificationsEnabled: ROKey<Bool> {
-        ROKey("notifications-enabled", in: .default, default: false)
+    private var oldNotificationsEnabled: Key<Bool, ReadOnly> {
+        Key("notifications-enabled", in: .default, default: false)
     }
 }
 ```
@@ -271,7 +273,7 @@ Or add it through Xcode:
 1. **Define keys in extensions** for organization and discoverability
 2. **Use appropriate categories** for different security and persistence needs
 3. **Provide sensible defaults** for all configuration keys
-4. **Use read-only keys (ROKey)** when values shouldn't be modified at runtime
+4. **Use read-only keys (`Key<Value, ReadOnly>`)** when values shouldn't be modified at runtime
 5. **Bootstrap the system early** in your app lifecycle
 6. **Handle migration** when changing configuration schemas
 7. **Use property wrappers** for clean SwiftUI integration
