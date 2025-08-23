@@ -12,8 +12,8 @@ class SecureEnclaveExample {
         
         // Define keys that use Secure Enclave
         public extension Configs.Keys {
-            var apiKey: Key<String> { Key("api-key", from: .secureEnclave, default: "") }
-            var authToken: Key<String> { Key("auth-token", from: .secureEnclave, default: "") }
+            var apiKey: Key<String> { Key("api-key", from: .critical, default: "") }
+            var authToken: Key<String> { Key("auth-token", from: .critical, default: "") }
         }
         
         let configs = Configs()

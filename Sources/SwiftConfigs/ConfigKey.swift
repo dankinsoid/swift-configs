@@ -6,30 +6,19 @@ public protocol ConfigKeyPermission {
     static var supportWriting: Bool { get }
 }
 
-func tt(key: Configs.Keys.Key<Int, Configs.Keys.ReadOnly>) {
-    
-    Configs.Keys.ReadOnly<Int>
-    Configs.Keys.ReadWrite<Int>
-    
-    ReadOnlyConfigKey<Int>
-    ReadWriteConfigKey<Int>
-}
-
 public typealias ReadOnlyConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 public typealias ReadWriteConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
-extension Configs {
-
-    public struct Keys {
-
+public extension Configs {
+    struct Keys {
         public init() {}
-        
+
         /// Read-only permission type for configuration keys
         public enum ReadOnly: ConfigKeyPermission {
             /// Read-only keys do not support writing
             public static var supportWriting: Bool { false }
         }
-        
+
         /// Read-write permission type for configuration keys
         public enum ReadWrite: ConfigKeyPermission {
             /// Read-write keys support writing operations
@@ -38,14 +27,13 @@ extension Configs {
 
         /// A concrete implementation of ConfigKey with specified value type and permission
         public struct Key<Value, Permission: ConfigKeyPermission> {
-            
             public let name: String
             private let _get: (ConfigsSystem.Handler) -> Value
             private let _set: (ConfigsSystem.Handler, Value) -> Void
             private let _remove: (ConfigsSystem.Handler) throws -> Void
             private let _exists: (ConfigsSystem.Handler) -> Bool
             private let _listen: (ConfigsSystem.Handler, @escaping (Value) -> Void) -> ConfigsCancellation
-            
+
             /// Creates a new configuration key with custom behavior
             public init(
                 _ key: String,
@@ -62,23 +50,23 @@ extension Configs {
                 _exists = exists
                 _listen = listen
             }
-            
+
             public func get(handler: ConfigsSystem.Handler) -> Value {
                 _get(handler)
             }
-            
+
             public func set(handler: ConfigsSystem.Handler, _ newValue: Value) {
                 _set(handler, newValue)
             }
-            
+
             public func remove(handler: ConfigsSystem.Handler) throws {
                 try _remove(handler)
             }
-            
+
             public func exists(handler: ConfigsSystem.Handler) -> Bool {
                 _exists(handler)
             }
-            
+
             public func listen(handler: ConfigsSystem.Handler, _ observer: @escaping (Value) -> Void) -> ConfigsCancellation {
                 _listen(handler, observer)
             }
@@ -87,7 +75,6 @@ extension Configs {
 }
 
 public extension Configs.Keys.Key {
-
     init(
         _ name: String,
         handler: @escaping (ConfigsSystem.Handler) -> ConfigsHandler,
@@ -176,7 +163,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     /// Creates an optional configuration key for LosslessStringConvertible values
     init<T>(
         _ key: String,
@@ -224,7 +211,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     /// Creates a configuration key for RawRepresentable values
     init(
         _ key: String,
@@ -280,7 +267,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     /// Returns the key instance.
     ///
     /// - Parameters:
@@ -300,7 +287,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     @_disfavoredOverload
     init(
         _ key: String,
@@ -342,7 +329,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     /// Returns the key instance.
     ///
     /// - Parameters:
@@ -366,7 +353,7 @@ public extension Configs.Keys.Key {
             cacheDefaultValue: cacheDefaultValue
         )
     }
-    
+
     /// Returns the key instance.
     ///
     /// - Parameters:
@@ -396,4 +383,3 @@ public extension Configs.Keys.Key {
     extension Configs.Keys: Sendable {}
     extension Configs.Keys.Key: @unchecked Sendable {}
 #endif
-

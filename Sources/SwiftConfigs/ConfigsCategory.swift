@@ -16,8 +16,8 @@ public struct ConfigsCategory: Hashable, CustomStringConvertible {
     public static let `default` = ConfigsCategory("Default")
     /// Secure configuration category using Keychain
     public static let secure = ConfigsCategory("Secure")
-    /// Secure Enclave configuration category for maximum security
-    public static let secureEnclave = ConfigsCategory("Secure Enclave")
+    /// Critical security configuration category for maximum protection
+    public static let critical = ConfigsCategory("Critical")
     /// Remote configuration category for server-based configs
     public static let remote = ConfigsCategory("Remote")
     /// Synced secure configuration category using iCloud Keychain

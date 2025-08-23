@@ -1,16 +1,19 @@
 # SwiftConfigs
 
-SwiftConfigs is a Swift package that provides a unified API for configuration management across different storage backends. It supports various storage options including UserDefaults, Keychain, environment variables, in-memory storage, and more, with a clean, type-safe interface.
+SwiftConfigs provides a unified, type-safe API for small key-value storage systems where keys can be manually enumerated. The library abstracts storage implementation details behind a clean interface, making it easy to switch between different backends without changing application code.
 
 ## Features
 
-- **Type-safe configuration keys** with compile-time validation
-- **Multiple storage backends** (UserDefaults, Keychain, Environment Variables, etc.)
-- **Configuration categories** for organizing different types of settings
-- **Property wrapper APIs** for SwiftUI-style usage
-- **Migration utilities** for evolving configuration schemas
-- **Listening for changes** with cancellable subscriptions
-- **Secure Enclave support** for maximum security on supported devices
+- **Unified API for Small Key-Value Stores**: Works with UserDefaults, Keychain, environment variables, in-memory storage, and other enumerable key-value systems
+- **Configuration Categories**: High-level abstraction that allows changing storage backends without modifying code that uses the values
+- **Type Safety**: Full support for any `Codable` values out of the box with compile-time type checking
+- **Flexible Key Configuration**: Individual keys can use specific handlers instead of abstract categories, allowing usage before system bootstrap
+- **Easy Storage Migration**: Seamlessly migrate between different storage backends or individual key migrations
+- **Test and Preview Support**: Automatically uses in-memory storage for SwiftUI previews and can be easily configured for testing
+- **Per-Key Customization**: Each configuration key can have its own handler, transformer, or migration logic
+- **Property Wrapper APIs** for simpler usage
+- **Real-time Updates** with cancellable change subscriptions
+- **Secure Storage Options** including Keychain and Secure Enclave support
 
 ## Getting Started
 
@@ -24,13 +27,20 @@ import SwiftConfigs
 
 ```swift
 public extension Configs.Keys {
-    var showAds: Key<Bool, ReadOnly> { Key("show-ads", in: .default, default: false) }
-    var apiToken: Key<String, ReadWrite> { Key("api-token", in: .secure, default: "") }
-    var serverURL: Key<String, ReadOnly> { Key("SERVER_URL", in: .environments, default: "https://api.example.com") }
+
+    var apiToken: Key<String?, ReadWrite> {
+        Key("api-token", in: .secure, default: nil)
+    }
+
+    var userID: Key<UUID, ReadOnly> { 
+        Key("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
+    }
+
+    var serverURL: Key<String, ReadOnly> { 
+        Key("SERVER_URL", in: .environments, default: "https://api.example.com")
+    }
 }
 ```
-
-> **Note**: The full `Key<Value, Permission>` syntax is now used instead of the previous `ROKey` and `RWKey` type aliases for better clarity and explicitness.
 
 ### 3. Create a Configs Instance
 
@@ -42,7 +52,7 @@ let configs = Configs()
 
 ```swift
 // Read values
-let shouldShowAds = configs.showAds
+let userID = configs.userID
 let token = configs.apiToken
 let serverURL = configs.serverURL
 
@@ -58,7 +68,7 @@ SwiftConfigs organizes configuration data using categories, allowing you to stor
 ConfigsSystem.bootstrap([
     .default: .userDefaults,           // General app settings
     .secure: .keychain,                // Sensitive data (tokens, passwords)
-    .secureEnclave: .secureEnclave(),  // Maximum security with biometrics
+    .critical: .secureEnclave(),       // Maximum security with biometrics
     .syncedSecure: .keychain(iCloudSync: true), // Synced secure data
     .environments: .environments,       // Environment variables
     .memory: .inMemory,                // Temporary/testing data
@@ -68,12 +78,13 @@ ConfigsSystem.bootstrap([
 
 ### Built-in Categories
 
-- **`.default`** - General application settings (UserDefaults)
-- **`.secure`** - Sensitive data requiring encryption (Keychain)
-- **`.secureEnclave`** - Maximum security with hardware protection
-- **`.syncedSecure`** - Secure data synced across devices (iCloud Keychain)
-- **`.environments`** - Environment variables (read-only)
-- **`.memory`** - In-memory storage for testing
+- **`.default`** - General application settings
+- **`.synced`** - Data synced across devices
+- **`.secure`** - Sensitive data requiring encryption
+- **`.critical`** - Maximum security with hardware protection
+- **`.syncedSecure`** - Secure data synced across devices
+- **`.environments`** - Environment variables
+- **`.memory`** - In-memory storage
 - **`.remote`** - Remote configuration cache
 
 ## Available Storage Handlers
@@ -95,31 +106,32 @@ ConfigsSystem.bootstrap([
 
 ### Other Handlers
 ```swift
-.environments                    // Environment variables (read-only)
-.inMemory                        // In-memory storage
-.inMemory(["key": "value"])      // In-memory with initial values
-.noop                           // No-operation handler
-.multiple([handler1, handler2])  // Multiplex multiple handlers
+.environments                  // Environment variables (read-only)
+.inMemory                      // In-memory storage
+.inMemory(["key": "value"])    // In-memory with initial values
+.noop                          // No-operation handler
+.multiple(handler1, handler2)  // Multiplex multiple handlers
+.fallback(for: handler1, with: handler2) // Fallback to next handler if value not found, useful for migrations or debugging read only storages
 ```
 
 ## Property Wrapper API
 
-Use property wrappers for SwiftUI-style configuration management:
+Use property wrappers for inline configuration management:
 
 ```swift
 struct AppSettings {
-    @ROConfig("show-ads", in: .default)
-    var showAds: Bool = false
+
+    @ROConfig(\.userID) var userID
     
     @RWConfig("api-token", in: .secure) 
-    var apiToken: String = ""
+    var apiToken: String?
     
     @RWConfig("user-preferences", in: .default)
     var preferences: UserPreferences = UserPreferences()
 }
 
 let settings = AppSettings()
-print(settings.showAds)          // Read value
+print(settings.userID)           // Read value
 settings.apiToken = "new-token"  // Write value
 ```
 
@@ -144,12 +156,12 @@ let value = try await configs.fetchIfNeeded(configs.someKey)
 let configs = Configs()
 
 // Listen to all configuration changes
-let cancellation = configs.listen { updatedConfigs in
+let cancellation = configs.listen { configs in
     print("Configurations updated")
 }
 
 // Listen to specific key changes  
-let keyCancellation = configs.listen(configs.apiToken) { newToken in
+let keyCancellation = configs.listen(\.apiToken) { newToken in
     print("API token changed: \(newToken)")
 }
 
@@ -164,18 +176,30 @@ SwiftConfigs automatically handles common types:
 
 ```swift
 public extension Configs.Keys {
+
     // String-convertible types
-    var count: Key<Int, ReadOnly> { Key("count", in: .default, default: 0) }
-    var rate: Key<Double, ReadOnly> { Key("rate", in: .default, default: 1.0) }
+    var count: Key<Int, ReadOnly> { 
+        Key("count", in: .default, default: 0)
+    }
+
+    var rate: Key<Double, ReadOnly> {
+        Key("rate", in: .default, default: 1.0)
+    }
     
     // Enum types
-    var theme: Key<Theme, ReadOnly> { Key("theme", in: .default, default: .light) }
+    var theme: Key<Theme, ReadOnly> { 
+        Key("theme", in: .default, default: .light)
+    }
     
     // Codable types (stored as JSON)
-    var settings: Key<AppSettings, ReadOnly> { Key("settings", in: .default, default: AppSettings()) }
+    var settings: Key<AppSettings, ReadOnly> {
+        Key("settings", in: .default, default: AppSettings())
+    }
     
     // Optional types
-    var optionalValue: Key<String?, ReadOnly> { Key("optional", in: .default, default: nil) }
+    var optionalValue: Key<String?, ReadOnly> {
+        Key("optional", in: .default, default: nil)
+    }
 }
 ```
 
@@ -185,9 +209,10 @@ Handle configuration schema changes gracefully:
 
 ```swift
 public extension Configs.Keys {
+
     // Migrate from old boolean to new enum
     var notificationStyle: Key<NotificationStyle, ReadOnly> {
-        Key.migraion(
+        .migraion(
             from: oldNotificationsEnabled,
             to: Key("notification-style", in: .default, default: .none)
         ) { oldValue in
@@ -275,7 +300,7 @@ Or add it through Xcode:
 ## Security Considerations
 
 - Use **`.secure`** category for sensitive data (API tokens, passwords)
-- Use **`.secureEnclave`** for maximum security on supported devices
+- Use **`.critical`** for maximum security on supported devices
 - **Never log** configuration values that might contain sensitive data
 - Use **`.syncedSecure`** carefully - only for data that should be shared across devices
 - **Environment variables** are read-only and visible to the process
