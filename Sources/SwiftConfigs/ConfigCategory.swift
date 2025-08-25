@@ -1,35 +1,39 @@
 import Foundation
 
 /// Represents a configuration category for organizing configuration keys
-public struct ConfigsCategory: Hashable, CustomStringConvertible {
+public struct ConfigCategory: Hashable, CustomStringConvertible {
 
 	private let uuid = UUID()
 	/// The human-readable name of the category
-	public let description: String
+	public let name: String
 
 	/// Creates a new configuration category
 	public init(_ name: String) {
-		self.description = name
+		self.name = name
+    }
+    
+    public var description: String {
+        name
     }
 
     /// Default configuration category using UserDefaults
-    public static let `default` = ConfigsCategory("Default")
+    public static let `default` = ConfigCategory("Default")
     /// Secure configuration category using Keychain
-    public static let secure = ConfigsCategory("Secure")
+    public static let secure = ConfigCategory("Secure")
     /// Critical security configuration category for maximum protection
-    public static let critical = ConfigsCategory("Critical")
+    public static let critical = ConfigCategory("Critical")
     /// Remote configuration category for server-based configs
-    public static let remote = ConfigsCategory("Remote")
+    public static let remote = ConfigCategory("Remote")
     /// Synced secure configuration category using iCloud Keychain
-	public static let syncedSecure = ConfigsCategory("Synced Secure")
+	public static let syncedSecure = ConfigCategory("Synced Secure")
     /// General synced configuration category
-	public static let synced = ConfigsCategory("Synced")
+	public static let synced = ConfigCategory("Synced")
     /// Environment variables configuration category
-	public static let environments = ConfigsCategory("Environments")
+	public static let environment = ConfigCategory("Environments")
     /// In-memory configuration category for testing
-	public static let memory = ConfigsCategory("In Memory")
+	public static let inMemory = ConfigCategory("In Memory")
 }
 
 #if compiler(>=5.6)
-    extension ConfigsCategory: Sendable {}
+    extension ConfigCategory: Sendable {}
 #endif

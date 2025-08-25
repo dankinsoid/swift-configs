@@ -1,8 +1,5 @@
 import Foundation
 
-@available(*, deprecated, renamed: "ConfigsHandler")
-public typealias RemoteConfigsHandler = ConfigsHandler
-
 /// Protocol for implementing configuration storage backends
 ///
 /// This type is an implementation detail and should not normally be used, unless implementing your own configs backend.
@@ -10,11 +7,11 @@ public typealias RemoteConfigsHandler = ConfigsHandler
 ///
 /// ## Example Implementation
 ///
-/// Here's how to implement a Firebase Remote Config handler:
+/// Here's how to implement a Firebase Remote Config store:
 ///
 /// ```swift
-/// public struct FirebaseRemoteConfigHandler: ConfigsHandler {
-///     public var supportWriting: Bool { false } // Remote configs are typically read-only
+/// public struct FirebaseRemoteStore: ConfigStore {
+///     public var isWritable: Bool { false } // Remote configs are typically read-only
 ///     
 ///     public func fetch(completion: @escaping (Error?) -> Void) {
 ///         // Fetch latest configs from Firebase
@@ -26,29 +23,29 @@ public typealias RemoteConfigsHandler = ConfigsHandler
 ///         }
 ///     }
 ///     
-///     public func value(for key: String) -> String? {
+///     public func get(_ key: String) -> String? {
 ///         // Get value from Firebase Remote Config
 ///         return RemoteConfig.remoteConfig().configValue(forKey: key).stringValue
 ///     }
 ///     
-///     public func writeValue(_ value: String?, for key: String) throws {
+///     public func set(_ value: String?, for key: String) throws {
 ///         // Remote configs don't support writing
 ///         throw ConfigError.unsupportedOperation
 ///     }
 ///     
-///     public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+///     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
 ///         // Set up real-time config updates listener
 ///         // Implementation depends on Firebase SDK capabilities
 ///         return nil
 ///     }
 ///     
-///     public func clear() throws {
+///     public func removeAll() throws {
 ///         throw ConfigError.unsupportedOperation
 ///     }
 ///     
-///     public func allKeys() -> Set<String>? {
+///     public func keys() -> Set<String>? {
 ///         // Return all available Firebase Remote Config keys
-///         return Set(RemoteConfig.remoteConfig().allKeys(from: .remote))
+///         return Set(RemoteConfig.remoteConfig().keys(from: .remote))
 ///     }
 ///     
 ///     private enum ConfigError: Error {
@@ -57,38 +54,41 @@ public typealias RemoteConfigsHandler = ConfigsHandler
 /// }
 ///
 /// // Bootstrap with Firebase Remote Config
-/// ConfigsSystem.bootstrap([
+/// ConfigSystem.bootstrap([
 ///     .default: .userDefaults,
-///     .remote: FirebaseRemoteConfigHandler()
+///     .remote: FirebaseRemoteStore()
 /// ])
 /// ```
-public protocol ConfigsHandler: _SwiftConfigsSendableAnalyticsHandler {
+public protocol ConfigStore: _SwiftConfigsSendableAnalyticsStore {
+
     /// Fetches the latest configuration values from the backend
     func fetch(completion: @escaping (Error?) -> Void)
     /// Registers a listener for configuration changes
-    func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation?
+    func onChange(_ listener: @escaping () -> Void) -> Cancellation?
     /// Retrieves the value for a given key
-    func value(for key: String) -> String?
+    func get(_ key: String) throws -> String?
     /// Writes a value for a given key
-    func writeValue(_ value: String?, for key: String) throws
+    func set(_ value: String?, for key: String) throws
+    /// Determines whether a value exists for a given key
+    func exists(_ key: String) throws -> Bool
     /// Clears all stored configuration values
-    func clear() throws
+    func removeAll() throws
     /// Returns all available configuration keys
-    func allKeys() -> Set<String>?
-	/// Whether the handler supports writing operations
-	var supportWriting: Bool { get }
+    func keys() -> Set<String>?
+	/// Whether the store supports writing operations
+	var isWritable: Bool { get }
 }
 
-extension ConfigsHandler {
+extension ConfigStore {
 
 	/// Retrieves and transforms a value for a given key
-	public func value<T>(for key: String, as transformer: ConfigTransformer<T>) -> T? {
-		value(for: key).flatMap(transformer.decode)
+	public func get<T>(_ key: String, as transformer: ConfigTransformer<T>) throws -> T? {
+		try get(key).flatMap(transformer.decode)
 	}
 
 	/// Transforms and writes a value for a given key
-	public func  writeValue<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
-		try writeValue(value.flatMap(transformer.encode), for: key)
+	public func set<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
+		try set(value.flatMap(transformer.encode), for: key)
 	}
 }
 
@@ -97,7 +97,7 @@ struct Unsupported: Error {}
 // MARK: - Sendable support helpers
 
 #if compiler(>=5.6)
-    @preconcurrency public protocol _SwiftConfigsSendableAnalyticsHandler: Sendable {}
+    @preconcurrency public protocol _SwiftConfigsSendableAnalyticsStore: Sendable {}
 #else
-    public protocol _SwiftConfigsSendableAnalyticsHandler {}
+    public protocol _SwiftConfigsSendableAnalyticsStore {}
 #endif

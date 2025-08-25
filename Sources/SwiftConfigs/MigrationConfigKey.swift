@@ -8,68 +8,63 @@ extension Configs.Keys.Key {
     ///   - newKey: The new configuration key to migrate to
     ///   - firstReadPolicy: Policy for what to do on first read of old value
     ///   - migrate: Function to transform the old value to the new value type
-    public static func migraion<OldValue, OldP: ConfigKeyPermission>(
+    public static func migration<OldValue, OldP: KeyAccess>(
         from oldKey: Configs.Keys.Key<OldValue, OldP>,
         to newKey: Self,
         firstReadPolicy: MigrationFirstReadPolicy = .default,
         migrate: @escaping (OldValue) -> Value
     ) -> Self {
-        Self.init(newKey.name) { handler in
-            if newKey.exists(handler: handler) || !oldKey.exists(handler: handler) {
-                return newKey.get(handler: handler)
+        Self.init(newKey.name) { registry in
+            if newKey.exists(registry: registry) || !oldKey.exists(registry: registry) {
+                return newKey.get(registry: registry)
             } else {
-                let value = migrate(oldKey.get(handler: handler))
-                if firstReadPolicy.contains(.writeToNew), Permission.supportWriting {
-                    newKey.set(handler: handler, value)
+                let value = migrate(oldKey.get(registry: registry))
+                if firstReadPolicy.contains(.writeToNew), Access.isWritable {
+                    newKey.set(registry: registry, value)
                 }
-                if firstReadPolicy.contains(.removeOld), OldP.supportWriting {
-                    try? oldKey.remove(handler: handler)
+                if firstReadPolicy.contains(.removeOld), OldP.isWritable {
+                    oldKey.delete(registry: registry)
                 }
                 return value
             }
-        } set: { handler, newValue in
-            newKey.set(handler: handler, newValue)
-        } remove: { hanlder in
-            do {
-                try oldKey.remove(handler: hanlder)
-            } catch {
-                try newKey.remove(handler: hanlder)
-                throw error
-            }
-            try newKey.remove(handler: hanlder)
-        } exists: { handler in
-            oldKey.exists(handler: handler) || newKey.exists(handler: handler)
-        } listen: { handler, observer in
-            newKey.listen(handler: handler, observer)
+        } set: { registry, newValue in
+            newKey.set(registry: registry, newValue)
+        } delete: { registry in
+            oldKey.delete(registry: registry)
+            newKey.delete(registry: registry)
+        } exists: { registry in
+            oldKey.exists(registry: registry) || newKey.exists(registry: registry)
+        } onChange: { registry, observer in
+            newKey.onChange(registry: registry, observer)
         }
     }
 
     /// Creates a migration key using key paths
-    public static func migraion<OldValue, OldP: ConfigKeyPermission>(
+    public static func migration<OldValue, OldP: KeyAccess>(
         from oldKey: KeyPath<Configs.Keys, Configs.Keys.Key<OldValue, OldP>>,
         to newKey: KeyPath<Configs.Keys, Self>,
         firstReadPolicy: MigrationFirstReadPolicy = .default,
         migrate: @escaping (OldValue) -> Value
     ) -> Self {
-        migraion(from: Configs.Keys()[keyPath: oldKey], to: Configs.Keys()[keyPath: newKey], firstReadPolicy: firstReadPolicy, migrate: migrate)
+        migration(from: Configs.Keys()[keyPath: oldKey], to: Configs.Keys()[keyPath: newKey], firstReadPolicy: firstReadPolicy, migrate: migrate)
     }
     
     /// Creates a migration key for same-type values (no transformation needed)
-    public static func migraion<OldP: ConfigKeyPermission>(
+    public static func migration<OldP: KeyAccess>(
         from oldKey: Configs.Keys.Key<Value, OldP>,
         to newKey: Self,
         firstReadPolicy: MigrationFirstReadPolicy = .default
     ) -> Self {
-        migraion(from: oldKey, to: newKey, firstReadPolicy: firstReadPolicy, migrate: { $0 })
+        migration(from: oldKey, to: newKey, firstReadPolicy: firstReadPolicy, migrate: { $0 })
     }
     
     /// Creates a migration key using key paths for same-type values
-    public static func migraion<OldP: ConfigKeyPermission>(
+    public static func migration<OldP: KeyAccess>(
         from oldKey: KeyPath<Configs.Keys, Configs.Keys.Key<Value, OldP>>,
         to newKey: KeyPath<Configs.Keys, Self>,
         firstReadPolicy: MigrationFirstReadPolicy = .default
     ) -> Self {
-        migraion(from: oldKey, to: newKey, firstReadPolicy: firstReadPolicy, migrate: { $0 })
+        migration(from: oldKey, to: newKey, firstReadPolicy: firstReadPolicy, migrate: { $0 })
     }
 }
 
@@ -93,6 +88,6 @@ public struct MigrationFirstReadPolicy: OptionSet, Hashable, CaseIterable {
     /// Remove the old key after successful migration
     public static let removeOld = MigrationFirstReadPolicy(rawValue: 1 << 1)
 
-    /// Default policy: write to new key and remove old key
+    /// Default policy: write to new key and delete old key
     public static let `default`: MigrationFirstReadPolicy = [.writeToNew, .removeOld]
 }

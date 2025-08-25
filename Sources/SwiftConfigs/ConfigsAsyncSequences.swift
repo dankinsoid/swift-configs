@@ -4,26 +4,26 @@ import Foundation
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct ConfigChangesSequence<Element>: AsyncSequence {
 
-    private let listen: @Sendable (@escaping (Element) -> Void) -> ConfigsCancellation
+    private let onChange: @Sendable (@escaping (Element) -> Void) -> Cancellation
 
     init(
-        listen: @escaping @Sendable (@escaping (Element) -> Void) -> ConfigsCancellation
+        onChange: @escaping @Sendable (@escaping (Element) -> Void) -> Cancellation
     ) {
-        self.listen = listen
+        self.onChange = onChange
     }
 
     public func makeAsyncIterator() -> AsyncIterator {
-        AsyncIterator(listen: listen)
+        AsyncIterator(onChange: onChange)
     }
 
     public final class AsyncIterator: AsyncIteratorProtocol {
-        private var cancellation: ConfigsCancellation?
+        private var cancellation: Cancellation?
         private var continuation: AsyncStream<Element>.Continuation?
         private var stream: AsyncStream<Element>.AsyncIterator?
-        private let listen: (@escaping (Element) -> Void) -> ConfigsCancellation
+        private let onChange: (@escaping (Element) -> Void) -> Cancellation
 
-        init(listen: @escaping @Sendable (@escaping (Element) -> Void) -> ConfigsCancellation) {
-            self.listen = listen
+        init(onChange: @escaping @Sendable (@escaping (Element) -> Void) -> Cancellation) {
+            self.onChange = onChange
         }
 
         public func next() async -> Element? {
@@ -32,7 +32,7 @@ public struct ConfigChangesSequence<Element>: AsyncSequence {
                 self.stream = stream.makeAsyncIterator()
                 self.continuation = continuation
 
-                cancellation = listen { element in
+                cancellation = onChange { element in
                     continuation.yield(element)
                 }
             }

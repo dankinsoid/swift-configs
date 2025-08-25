@@ -1,30 +1,27 @@
 import Foundation
 
-@available(*, deprecated, renamed: "NOOPConfigsHandler")
-public typealias NOOPRemoteConfigsHandler = NOOPConfigsHandler
-
-/// No-operation configuration handler that provides no functionality
-public struct NOOPConfigsHandler: ConfigsHandler {
+/// No-operation configuration store that provides no functionality
+public struct NOOPConfigStore: ConfigStore {
 	
-    /// Shared instance of the no-op configuration handler
-    public static let instance = NOOPConfigsHandler()
+    /// Shared instance of the no-op configuration store
+    public static let instance = NOOPConfigStore()
 	
-	/// NOOP handler claims to support writing (but does nothing)
-	public var supportWriting: Bool { true }
+	/// NOOP store claims to support writing (but does nothing)
+	public var isWritable: Bool { true }
 
-    /// Creates a no-op configuration handler
+    /// Creates a no-op configuration store
     public init() {}
 
     /// Always returns nil
-    public func value(for _: String) -> String? {
-        return nil
+    public func get(_: String) -> String? {
+        nil
     }
 
     /// Does nothing
-    public func writeValue(_: String?, for _: String) throws {}
+    public func set(_: String?, for _: String) throws {}
 
     /// Does nothing
-    public func clear() throws {}
+    public func removeAll() throws {}
 
     /// Immediately completes with no error
     public func fetch(completion: @escaping (Error?) -> Void) {
@@ -32,20 +29,24 @@ public struct NOOPConfigsHandler: ConfigsHandler {
     }
 
     /// Returns no cancellation (no listening occurs)
-    public func listen(_: @escaping () -> Void) -> ConfigsCancellation? {
-        return nil
+    public func onChange(_: @escaping () -> Void) -> Cancellation? {
+        nil
     }
 	
 	/// Returns no keys
-	public func allKeys() -> Set<String>? {
+	public func keys() -> Set<String>? {
 		nil
 	}
+    
+    public func exists(_ key: String) throws -> Bool {
+        false
+    }
 }
 
-extension ConfigsHandler where Self == NOOPConfigsHandler {
+extension ConfigStore where Self == NOOPConfigStore {
 
-	/// Returns a shared instance of the no-op configuration handler
-	public static var noop: NOOPConfigsHandler {
-		NOOPConfigsHandler.instance
+	/// Returns a shared instance of the no-op configuration store
+	public static var noop: NOOPConfigStore {
+		NOOPConfigStore.instance
 	}
 }

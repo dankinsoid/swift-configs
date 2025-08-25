@@ -1,17 +1,17 @@
 import Foundation
 
-/// A ConfigsHandler that wraps another handler and adds a prefix to all keys
-public struct PrefixConfigsHandler: ConfigsHandler {
-    private let underlyingHandler: ConfigsHandler
+/// A ConfigStore that wraps another store and adds a prefix to all keys
+public struct PrefixConfigStore: ConfigStore {
+    private let underlyingStore: ConfigStore
     private let prefix: String
     
-    /// Creates a prefix handler that adds a prefix to all keys
+    /// Creates a prefix store that adds a prefix to all keys
     /// - Parameters:
     ///   - prefix: The prefix to add to all keys
-    ///   - handler: The underlying handler to wrap
-    public init(prefix: String, handler: ConfigsHandler) {
+    ///   - store: The underlying store to wrap
+    public init(prefix: String, store: ConfigStore) {
         self.prefix = prefix
-        self.underlyingHandler = handler
+        self.underlyingStore = store
     }
     
     private func prefixedKey(_ key: String) -> String {
@@ -23,53 +23,57 @@ public struct PrefixConfigsHandler: ConfigsHandler {
         return String(prefixedKey.dropFirst(prefix.count))
     }
     
-    public func value(for key: String) -> String? {
-        return underlyingHandler.value(for: prefixedKey(key))
+    public func get(_ key: String) throws -> String? {
+        try underlyingStore.get(prefixedKey(key))
+    }
+    
+    public func exists(_ key: String) throws -> Bool {
+        try underlyingStore.exists(prefixedKey(key))
     }
     
     public func fetch(completion: @escaping (Error?) -> Void) {
-        underlyingHandler.fetch(completion: completion)
+        underlyingStore.fetch(completion: completion)
     }
     
-    public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
-        return underlyingHandler.listen(listener)
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+        return underlyingStore.onChange(listener)
     }
     
-    public func writeValue(_ value: String?, for key: String) throws {
-        try underlyingHandler.writeValue(value, for: prefixedKey(key))
+    public func set(_ value: String?, for key: String) throws {
+        try underlyingStore.set(value, for: prefixedKey(key))
     }
     
-    public func clear() throws {
+    public func removeAll() throws {
         // Only clear keys with our prefix
-        guard let allKeys = underlyingHandler.allKeys() else {
+        guard let keys = underlyingStore.keys() else {
             throw Unsupported()
         }
         
-        for key in allKeys where key.hasPrefix(prefix) {
-            try underlyingHandler.writeValue(nil, for: key)
+        for key in keys where key.hasPrefix(prefix) {
+            try underlyingStore.set(nil, for: key)
         }
     }
     
-    public func allKeys() -> Set<String>? {
-        guard let allKeys = underlyingHandler.allKeys() else { return nil }
+    public func keys() -> Set<String>? {
+        guard let keys = underlyingStore.keys() else { return nil }
         
-        return Set(allKeys.compactMap { prefixedKey in
+        return Set(keys.compactMap { prefixedKey in
             unprefixedKey(prefixedKey)
         })
     }
     
-    public var supportWriting: Bool {
-        return underlyingHandler.supportWriting
+    public var isWritable: Bool {
+        return underlyingStore.isWritable
     }
 }
 
-public extension ConfigsHandler where Self == PrefixConfigsHandler {
+public extension ConfigStore where Self == PrefixConfigStore {
 
-    /// Creates a prefix configs handler that adds a prefix to all keys
+    /// Creates a prefix configs store that adds a prefix to all keys
     /// - Parameters:
     ///   - prefix: The prefix to add to all keys
-    ///   - handler: The underlying handler to wrap
-    static func prefix(_ prefix: String, handler: ConfigsHandler) -> PrefixConfigsHandler {
-        PrefixConfigsHandler(prefix: prefix, handler: handler)
+    ///   - store: The underlying store to wrap
+    static func prefix(_ prefix: String, store: ConfigStore) -> PrefixConfigStore {
+        PrefixConfigStore(prefix: prefix, store: store)
     }
 }

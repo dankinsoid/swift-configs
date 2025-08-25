@@ -7,10 +7,10 @@ SwiftConfigs provides a unified, type-safe API for small key-value storage syste
 - **Unified API for Small Key-Value Stores**: Works with UserDefaults, Keychain, environment variables, in-memory storage, and other enumerable key-value systems
 - **Configuration Categories**: High-level abstraction that allows changing storage backends without modifying code that uses the values
 - **Type Safety**: Full support for any `Codable` values out of the box with compile-time type checking
-- **Flexible Key Configuration**: Individual keys can use specific handlers instead of abstract categories, allowing usage before system bootstrap
+- **Flexible Key Configuration**: Individual keys can use specific stores instead of abstract categories, allowing usage before system bootstrap
 - **Easy Storage Migration**: Seamlessly migrate between different storage backends or individual key migrations
 - **Test and Preview Support**: Automatically uses in-memory storage for SwiftUI previews and can be easily configured for testing
-- **Per-Key Customization**: Each configuration key can have its own handler, transformer, or migration logic
+- **Per-Key Customization**: Each configuration key can have its own store, transformer, or migration logic
 - **Property Wrapper APIs** for simpler usage
 - **Real-time Updates** with cancellable change subscriptions
 - **Secure Storage Options** including Keychain and Secure Enclave support
@@ -65,7 +65,7 @@ configs.apiToken = "new-token"
 SwiftConfigs organizes configuration data using categories, allowing you to store different types of settings in appropriate backends:
 
 ```swift
-ConfigsSystem.bootstrap([
+ConfigSystem.bootstrap([
     .default: .userDefaults,           // General app settings
     .secure: .keychain,                // Sensitive data (tokens, passwords)
     .critical: .secureEnclave(),       // Maximum security with biometrics
@@ -87,7 +87,7 @@ ConfigsSystem.bootstrap([
 - **`.memory`** - In-memory storage
 - **`.remote`** - Remote configuration cache
 
-## Available Storage Handlers
+## Available Stores
 
 ### UserDefaults
 ```swift
@@ -104,14 +104,14 @@ ConfigsSystem.bootstrap([
 .passcodeSecureEnclave()         // Secure Enclave with device passcode
 ```
 
-### Other Handlers
+### Other Stores
 ```swift
 .environments                  // Environment variables (read-only)
 .inMemory                      // In-memory storage
 .inMemory(["key": "value"])    // In-memory with initial values
-.noop                          // No-operation handler
-.multiple(handler1, handler2)  // Multiplex multiple handlers
-.fallback(for: handler1, with: handler2) // Fallback to next handler if value not found, useful for migrations or debugging read only storages
+.noop                          // No-operation store
+.multiple(store1, store2)  // Multiplex multiple stores
+.migration(from: store1, to: store2) // Fallback to next store if value not found, useful for migrations or debugging read only storages
 ```
 
 ## Property Wrapper API
@@ -121,12 +121,12 @@ Use property wrappers for inline configuration management:
 ```swift
 struct AppSettings {
 
-    @ReadOnlyConfig(\.userID) var userID
+    @ROConfig(\.userID) var userID
     
-    @ReadWriteConfig("api-token", in: .secure) 
+    @RWConfig("api-token", in: .secure) 
     var apiToken: String?
     
-    @ReadWriteConfig("user-preferences", in: .default)
+    @RWConfig("user-preferences", in: .default)
     var preferences: UserPreferences = UserPreferences()
 }
 
@@ -158,12 +158,12 @@ let value = try await configs.fetchIfNeeded(configs.someKey)
 let configs = Configs()
 
 // Listen to all configuration changes
-let cancellation = configs.listen { configs in
+let cancellation = configs.onChange { configs in
     print("Configurations updated")
 }
 
 // Listen to specific key changes  
-let keyCancellation = configs.listen(\.apiToken) { newToken in
+let keyCancellation = configs.onChange(\.apiToken) { newToken in
     print("API token changed: \(newToken)")
 }
 
@@ -244,7 +244,7 @@ public extension Configs.Keys {
 
     // Migrate from old boolean to new enum
     var notificationStyle: Key<NotificationStyle, ReadOnly> {
-        .migraion(
+        .migration(
             from: oldNotificationsEnabled,
             to: Key("notification-style", in: .default, default: .none)
         ) { oldValue in
@@ -258,13 +258,13 @@ public extension Configs.Keys {
 }
 ```
 
-## Custom Configuration Handlers
+## Custom Configuration Stores
 
-You can create custom storage backends by implementing the `ConfigsHandler` protocol. See the protocol documentation for detailed implementation examples.
+You can create custom storage backends by implementing the `ConfigStore` protocol. See the protocol documentation for detailed implementation examples.
 
 ## Available Implementations
 
-There is a ready-to-use ConfigsHandler implementation:
+There is a ready-to-use ConfigStore implementation:
 
 ### Firebase Remote Config
 - **Repository**: [swift-firebase-tools](https://github.com/dankinsoid/swift-firebase-tools)
@@ -278,7 +278,7 @@ There is a ready-to-use ConfigsHandler implementation:
 // Usage
 import FirebaseConfigs
 
-ConfigsSystem.bootstrap([
+ConfigSystem.bootstrap([
     .default: .userDefaults,
     .remote: .firebaseRemoteConfig
 ])
@@ -286,10 +286,10 @@ ConfigsSystem.bootstrap([
 
 ### Community Contributions
 
-Want to add your own ConfigsHandler implementation? Consider contributing to the ecosystem by:
+Want to add your own ConfigStore implementation? Consider contributing to the ecosystem by:
 
-1. Creating a separate package with your handler
-2. Following the `ConfigsHandler` protocol
+1. Creating a separate package with your store
+2. Following the `ConfigStore` protocol
 3. Adding comprehensive tests and documentation
 4. Submitting your package for inclusion in this list
 

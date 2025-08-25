@@ -1,10 +1,10 @@
 import Foundation
 
-@available(*, deprecated, renamed: "InMemoryConfigsHandler")
-public typealias MockRemoteConfigsHandler = InMemoryConfigsHandler
+@available(*, deprecated, renamed: "InMemoryConfigStore")
+public typealias MockRemoteConfigStore = InMemoryConfigStore
 
-/// Configuration handler that stores values in memory for testing and caching
-public final class InMemoryConfigsHandler: ConfigsHandler {
+/// Configuration store that stores values in memory for testing and caching
+public final class InMemoryConfigStore: ConfigStore {
 
     /// All configuration values stored in memory
     public var values: [String: String] {
@@ -19,21 +19,21 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
         }
     }
 	
-	/// Shared in-memory configuration handler instance
-	public static let shared = InMemoryConfigsHandler()
+	/// Shared in-memory configuration store instance
+	public static let shared = InMemoryConfigStore()
 
     private var observers: [UUID: () -> Void] = [:]
     private var _values: [String: String]
     private let lock = ReadWriteLock()
 
-    /// Creates an in-memory configuration handler
+    /// Creates an in-memory configuration store
     /// - Parameter values: Initial configuration values
     public init(_ values: [String: String] = [:]) {
         _values = values
     }
 
     /// Retrieves a value from memory
-    public func value(for key: String) -> String? {
+    public func get(_ key: String) -> String? {
         values[key]
     }
 
@@ -43,17 +43,21 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
     }
 
     /// Returns all keys stored in memory
-    public func allKeys() -> Set<String>? {
+    public func keys() -> Set<String>? {
         Set(lock.withReaderLock { _values.keys })
     }
+    
+    public func exists(_ key: String) -> Bool {
+        lock.withReaderLock { _values[key] != nil }
+    }
 	
-	/// In-memory handler supports writing operations
-	public var supportWriting: Bool {
+	/// In-memory store supports writing operations
+	public var isWritable: Bool {
 		true
 	}
 
     /// Writes a value to memory
-    public func writeValue(_ value: String?, for key: String) throws {
+    public func set(_ value: String?, for key: String) throws {
         lock.withWriterLock {
             _values[key] = value
             return observers.values
@@ -62,7 +66,7 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
     }
 
     /// Clears all values from memory
-    public func clear() throws {
+    public func removeAll() throws {
         lock.withWriterLock {
             _values = [:]
             return observers.values
@@ -71,12 +75,12 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
     }
 
     /// Registers a listener for in-memory value changes
-    public func listen(_ observer: @escaping () -> Void) -> ConfigsCancellation? {
+    public func onChange(_ observer: @escaping () -> Void) -> Cancellation? {
         let id = UUID()
         lock.withWriterLockVoid {
             observers[id] = observer
         }
-        return ConfigsCancellation { [weak self] in
+        return Cancellation { [weak self] in
             self?.lock.withWriterLockVoid {
                 self?.observers.removeValue(forKey: id)
             }
@@ -84,16 +88,16 @@ public final class InMemoryConfigsHandler: ConfigsHandler {
     }
 }
 
-extension ConfigsHandler where Self == InMemoryConfigsHandler {
+extension ConfigStore where Self == InMemoryConfigStore {
 
-	/// Returns a shared in-memory configuration handler
-	public static var inMemory: InMemoryConfigsHandler {
-		InMemoryConfigsHandler.shared
+	/// Returns a shared in-memory configuration store
+	public static var inMemory: InMemoryConfigStore {
+		InMemoryConfigStore.shared
 	}
 
-	/// Creates an in-memory configuration handler with initial values
+	/// Creates an in-memory configuration store with initial values
 	/// - Parameter values: Initial configuration values
-	public static func inMemory(_ values: [String: String] = [:]) -> InMemoryConfigsHandler {
-		InMemoryConfigsHandler(values)
+	public static func inMemory(_ values: [String: String] = [:]) -> InMemoryConfigStore {
+		InMemoryConfigStore(values)
 	}
 }

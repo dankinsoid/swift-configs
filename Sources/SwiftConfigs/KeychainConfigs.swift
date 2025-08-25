@@ -5,8 +5,8 @@ import Foundation
 		import UIKit
 	#endif
 
-	/// Configuration handler backed by iOS/macOS Keychain for secure storage
-	public final class KeychainConfigsHandler: ConfigsHandler {
+	/// Configuration store backed by iOS/macOS Keychain for secure storage
+	public final class KeychainConfigStore: ConfigStore {
 		/// Optional service identifier for keychain items
 		public let service: String?
 		/// Security class for keychain items
@@ -22,10 +22,10 @@ import Foundation
 		private var observers: [UUID: () -> Void] = [:]
 		private let lock = ReadWriteLock()
 
-		/// Shared default keychain configuration handler
-		public static var `default` = KeychainConfigsHandler()
+		/// Shared default keychain configuration store
+		public static var `default` = KeychainConfigStore()
 
-		/// Creates a keychain configs handler
+		/// Creates a keychain configs store
 		/// - Parameters:
 		///   - service: Optional service identifier for keychain items
 		///   - secClass: Security class for keychain items
@@ -55,7 +55,7 @@ import Foundation
 		}
 
 		/// Retrieves a value from the keychain
-		public func value(for key: String) -> String? {
+		public func get(_ key: String) -> String? {
 			let (_, item, status) = loadStatus(for: key)
 			return try? load(item: item, status: status)
 		}
@@ -66,20 +66,20 @@ import Foundation
 		}
 
 		/// Registers a listener for keychain changes
-		public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+		public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
 			let id = UUID()
 			lock.withWriterLock {
 				observers[id] = listener
 			}
-			return ConfigsCancellation { [weak self] in
+			return Cancellation { [weak self] in
 				self?.lock.withWriterLockVoid {
 					self?.observers.removeValue(forKey: id)
 				}
 			}
 		}
 
-		/// Returns all keychain keys for this handler
-		public func allKeys() -> Set<String>? {
+		/// Returns all keychain keys for this store
+		public func keys() -> Set<String>? {
 			var query: [String: Any] = [
 				kSecReturnAttributes as String: kCFBooleanTrue!,
 				kSecMatchLimit as String: kSecMatchLimitAll,
@@ -109,11 +109,11 @@ import Foundation
 			return keys
 		}
 		
-		/// Keychain handler supports writing operations
-		public var supportWriting: Bool { true }
+		/// Keychain store supports writing operations
+		public var isWritable: Bool { true }
 
 		/// Writes a value to the keychain
-		public func writeValue(_ value: String?, for key: String) throws {
+		public func set(_ value: String?, for key: String) throws {
 			// Create a query for saving the value
 			var query: [String: Any] = [
 				kSecAttrAccount as String: key,
@@ -143,9 +143,21 @@ import Foundation
 			}
 			.forEach { $0() }
 		}
+        
+        public func exists(_ key: String) throws -> Bool {
+            let (_, _, status) = loadStatus(for: key)
+            switch status {
+            case noErr, errSecSuccess:
+                return true
+            case errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain:
+                return false
+            default:
+                throw KeychainError("Failed to check existence of the key in the Keychain. Status: \(status)")
+            }
+        }
 
-		/// Clears all keychain items for this handler
-		public func clear() throws {
+		/// Clears all keychain items for this store
+		public func removeAll() throws {
 			var query: [String: Any] = [:]
 			configureAccess(query: &query)
 
@@ -403,14 +415,14 @@ import Foundation
 		private struct TimeoutError: Error {}
 	#endif
 
-extension ConfigsHandler where Self == KeychainConfigsHandler {
+extension ConfigStore where Self == KeychainConfigStore {
 
-	/// Creates a default Keychain configs handler
-	public static var keychain: KeychainConfigsHandler {
-		KeychainConfigsHandler.default
+	/// Creates a default Keychain configs store
+	public static var keychain: KeychainConfigStore {
+		KeychainConfigStore.default
 	}
 	
-	/// Creates a Keychain configs handler with the specified service identifier
+	/// Creates a Keychain configs store with the specified service identifier
 	/// - Parameters:
 	///  - service: Optional service identifier for keychain items
 	///  - secClass: Security class for keychain items
@@ -420,13 +432,13 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 	/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
 	public static func keychain(
 		service: String? = nil,
-		class secClass: KeychainConfigsHandler.SecClass = .genericPassowrd,
-		attrAccessible: KeychainConfigsHandler.SecAttrAccessible = .afterFirstUnlock,
+		class secClass: KeychainConfigStore.SecClass = .genericPassowrd,
+		attrAccessible: KeychainConfigStore.SecAttrAccessible = .afterFirstUnlock,
 		iCloudSync: Bool = false,
 		useSecureEnclave: Bool = false,
-		secureEnclaveAccessControl: KeychainConfigsHandler.SecureEnclaveAccessControl? = nil
-	) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(
+		secureEnclaveAccessControl: KeychainConfigStore.SecureEnclaveAccessControl? = nil
+	) -> KeychainConfigStore {
+		KeychainConfigStore(
 			service: service, 
 			class: secClass, 
 			attrAccessible: attrAccessible, 
@@ -436,29 +448,29 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 		)
 	}
 	
-	/// Creates a Secure Enclave Keychain configs handler with user presence requirement
+	/// Creates a Secure Enclave Keychain configs store with user presence requirement
 	/// - Parameters:
 	///  - service: Optional service identifier for keychain items
 	///  - accessControl: Secure Enclave access control options (defaults to user presence)
 	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
 	public static func secureEnclave(
 		service: String? = nil,
-		accessControl: KeychainConfigsHandler.SecureEnclaveAccessControl = .userPresence
-	) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(
+		accessControl: KeychainConfigStore.SecureEnclaveAccessControl = .userPresence
+	) -> KeychainConfigStore {
+		KeychainConfigStore(
 			service: service,
 			useSecureEnclave: true,
 			secureEnclaveAccessControl: accessControl
 		)
 	}
 	
-	/// Creates a Secure Enclave Keychain configs handler with biometric authentication
+	/// Creates a Secure Enclave Keychain configs store with biometric authentication
 	/// - Parameters:
 	///  - service: Optional service identifier for keychain items
 	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
 	#if os(iOS)
-	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(
+	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigStore {
+		KeychainConfigStore(
 			service: service,
 			useSecureEnclave: true,
 			secureEnclaveAccessControl: .biometryAny
@@ -466,10 +478,10 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 	}
 	#elseif os(macOS)
 	@available(macOS 10.13.4, *)
-	/// Creates a Secure Enclave Keychain configs handler with biometric authentication
+	/// Creates a Secure Enclave Keychain configs store with biometric authentication
 	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
-	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(
+	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigStore {
+		KeychainConfigStore(
 			service: service,
 			useSecureEnclave: true,
 			secureEnclaveAccessControl: .biometryAny
@@ -477,12 +489,12 @@ extension ConfigsHandler where Self == KeychainConfigsHandler {
 	}
 	#endif
 	
-	/// Creates a Secure Enclave Keychain configs handler with device passcode requirement
+	/// Creates a Secure Enclave Keychain configs store with device passcode requirement
 	/// - Parameters:
 	///  - service: Optional service identifier for keychain items
 	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
-	public static func passcodeSecureEnclave(service: String? = nil) -> KeychainConfigsHandler {
-		KeychainConfigsHandler(
+	public static func passcodeSecureEnclave(service: String? = nil) -> KeychainConfigStore {
+		KeychainConfigStore(
 			service: service,
 			useSecureEnclave: true,
 			secureEnclaveAccessControl: .devicePasscode

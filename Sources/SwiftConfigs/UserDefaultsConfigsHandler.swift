@@ -1,23 +1,23 @@
 import Foundation
 
-/// Configuration handler backed by UserDefaults for persistent storage
-public final class UserDefaultsConfigsHandler: ConfigsHandler {
+/// Configuration store backed by UserDefaults for persistent storage
+public final class UserDefaultsConfigStore: ConfigStore {
     private let userDefaults: UserDefaults
     private var observers: [UUID: () -> Void] = [:]
     private let lock = ReadWriteLock()
     private var notificationObserver: NSObjectProtocol?
 	
-	/// Shared standard UserDefaults configuration handler
-	public static let standard = UserDefaultsConfigsHandler()
+	/// Shared standard UserDefaults configuration store
+	public static let standard = UserDefaultsConfigStore()
 
-    /// Creates a UserDefaults configuration handler
+    /// Creates a UserDefaults configuration store
     /// - Parameter userDefaults: The UserDefaults instance to use
     public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         setupNotificationObserver()
     }
 
-    /// Creates a UserDefaults configuration handler with a specific suite
+    /// Creates a UserDefaults configuration store with a specific suite
     /// - Parameter suiteName: The suite name for UserDefaults
     public convenience init?(suiteName: String) {
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
@@ -47,7 +47,7 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
         currentObservers.forEach { $0() }
     }
 
-    // MARK: - ConfigsHandler Implementation
+    // MARK: - ConfigStore Implementation
 
     /// UserDefaults is always available, no fetching required
     public func fetch(completion: @escaping (Error?) -> Void) {
@@ -55,13 +55,13 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
     }
 
     /// Registers a listener for UserDefaults changes
-    public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
         let id = UUID()
         lock.withWriterLockVoid {
             observers[id] = listener
         }
 
-        return ConfigsCancellation { [weak self] in
+        return Cancellation { [weak self] in
             self?.lock.withWriterLockVoid {
                 self?.observers.removeValue(forKey: id)
             }
@@ -69,17 +69,21 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
     }
 
     /// Retrieves a string value from UserDefaults
-    public func value(for key: String) -> String? {
+    public func get(_ key: String) -> String? {
         userDefaults.string(forKey: key)
     }
+    
+    public func exists(_ key: String) throws -> Bool {
+        userDefaults.object(forKey: key) != nil
+    }
 	
-	/// UserDefaults handler supports writing operations
-	public var supportWriting: Bool {
+	/// UserDefaults store supports writing operations
+	public var isWritable: Bool {
 		true
 	}
 
     /// Writes a value to UserDefaults
-    public func writeValue(_ value: String?, for key: String) throws {
+    public func set(_ value: String?, for key: String) throws {
         if let value = value {
             userDefaults.set(value, forKey: key)
         } else {
@@ -88,31 +92,31 @@ public final class UserDefaultsConfigsHandler: ConfigsHandler {
     }
 
     /// Clears all UserDefaults values
-    public func clear() throws {
-        let keys = allKeys() ?? Set()
+    public func removeAll() throws {
+        let keys = keys() ?? Set()
         for key in keys {
             userDefaults.removeObject(forKey: key)
         }
     }
 
     /// Returns all UserDefaults keys
-    public func allKeys() -> Set<String>? {
+    public func keys() -> Set<String>? {
         Set(userDefaults.dictionaryRepresentation().keys)
     }
 }
 
 #if compiler(>=5.6)
-    extension UserDefaultsConfigsHandler: @unchecked Sendable {}
+    extension UserDefaultsConfigStore: @unchecked Sendable {}
 #endif
 
-extension ConfigsHandler where Self == UserDefaultsConfigsHandler {
-	/// Creates a standard UserDefaults configuration handler
-	public static var userDefaults: UserDefaultsConfigsHandler {
+extension ConfigStore where Self == UserDefaultsConfigStore {
+	/// Creates a standard UserDefaults configuration store
+	public static var userDefaults: UserDefaultsConfigStore {
 		.standard
 	}
 
-	/// Creates a UserDefaults configuration handler with a specific suite
-	public static func userDefaults(suiteName: String) -> UserDefaultsConfigsHandler? {
-		UserDefaultsConfigsHandler(suiteName: suiteName)
+	/// Creates a UserDefaults configuration store with a specific suite
+	public static func userDefaults(suiteName: String) -> UserDefaultsConfigStore? {
+		UserDefaultsConfigStore(suiteName: suiteName)
 	}
 }

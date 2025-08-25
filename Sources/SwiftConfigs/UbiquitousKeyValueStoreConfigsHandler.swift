@@ -1,17 +1,17 @@
 #if canImport(Foundation) && (os(iOS) || os(macOS) || os(tvOS) || os(watchOS))
     import Foundation
 
-    /// A ConfigsHandler implementation backed by NSUbiquitousKeyValueStore for iCloud key-value storage
+    /// A ConfigStore implementation backed by NSUbiquitousKeyValueStore for iCloud key-value storage
     @available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *)
-    public final class UbiquitousKeyValueStoreConfigsHandler: ConfigsHandler {
+    public final class UbiquitousKeyValueStoreConfigStore: ConfigStore {
         private let ubiquitousStore: NSUbiquitousKeyValueStore
         private var observers: [UUID: () -> Void] = [:]
         private let lock = ReadWriteLock()
         private var notificationObserver: NSObjectProtocol?
 
-        public static let `default` = UbiquitousKeyValueStoreConfigsHandler()
+        public static let `default` = UbiquitousKeyValueStoreConfigStore()
 
-        /// Creates an iCloud key-value store configs handler
+        /// Creates an iCloud key-value store configs store
         /// - Parameter ubiquitousStore: The NSUbiquitousKeyValueStore instance to use
         public init(ubiquitousStore: NSUbiquitousKeyValueStore = .default) {
             self.ubiquitousStore = ubiquitousStore
@@ -39,7 +39,7 @@
             currentObservers.forEach { $0() }
         }
 
-        // MARK: - ConfigsHandler Implementation
+        // MARK: - ConfigStore Implementation
 
         public func fetch(completion: @escaping (Error?) -> Void) {
             // Synchronize with iCloud
@@ -47,28 +47,32 @@
             completion(success ? nil : UbiquitousStoreError.synchronizationFailed)
         }
 
-        public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+        public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
             let id = UUID()
             lock.withWriterLockVoid {
                 observers[id] = listener
             }
 
-            return ConfigsCancellation { [weak self] in
+            return Cancellation { [weak self] in
                 self?.lock.withWriterLockVoid {
                     self?.observers.removeValue(forKey: id)
                 }
             }
         }
 		
-		public var supportWriting: Bool {
+		public var isWritable: Bool {
 			true
 		}
 
-        public func value(for key: String) -> String? {
+        public func get(_ key: String) -> String? {
             ubiquitousStore.string(forKey: key)
         }
+        
+        public func exists(_ key: String) throws -> Bool {
+            ubiquitousStore.object(forKey: key) != nil
+        }
 
-        public func writeValue(_ value: String?, for key: String) throws {
+        public func set(_ value: String?, for key: String) throws {
             if let value = value {
                 ubiquitousStore.set(value, forKey: key)
             } else {
@@ -82,8 +86,8 @@
             }
         }
 
-        public func clear() throws {
-            let keys = allKeys() ?? Set()
+        public func removeAll() throws {
+            let keys = keys() ?? Set()
             for key in keys {
                 ubiquitousStore.removeObject(forKey: key)
             }
@@ -94,7 +98,7 @@
             }
         }
 
-        public func allKeys() -> Set<String>? {
+        public func keys() -> Set<String>? {
             Set(ubiquitousStore.dictionaryRepresentation.keys)
         }
     }
@@ -105,19 +109,19 @@
 
     #if compiler(>=5.6)
         @available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *)
-        extension UbiquitousKeyValueStoreConfigsHandler: @unchecked Sendable {}
+        extension UbiquitousKeyValueStoreConfigStore: @unchecked Sendable {}
     #endif
 
     @available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *)
-    public extension ConfigsHandler where Self == UbiquitousKeyValueStoreConfigsHandler {
-        /// Creates a default iCloud key-value store configs handler
-        static var ubiquitous: UbiquitousKeyValueStoreConfigsHandler {
+    public extension ConfigStore where Self == UbiquitousKeyValueStoreConfigStore {
+        /// Creates a default iCloud key-value store configs store
+        static var ubiquitous: UbiquitousKeyValueStoreConfigStore {
             .default
         }
 
-        /// Creates an iCloud key-value store configs handler with a specific NSUbiquitousKeyValueStore instance
-        static func ubiquitous(store ubiquitousStore: NSUbiquitousKeyValueStore) -> UbiquitousKeyValueStoreConfigsHandler {
-            UbiquitousKeyValueStoreConfigsHandler(ubiquitousStore: ubiquitousStore)
+        /// Creates an iCloud key-value store configs store with a specific NSUbiquitousKeyValueStore instance
+        static func ubiquitous(store ubiquitousStore: NSUbiquitousKeyValueStore) -> UbiquitousKeyValueStoreConfigStore {
+            UbiquitousKeyValueStoreConfigStore(ubiquitousStore: ubiquitousStore)
         }
     }
 #endif

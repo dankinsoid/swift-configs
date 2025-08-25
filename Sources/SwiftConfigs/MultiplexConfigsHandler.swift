@@ -1,54 +1,76 @@
 import Foundation
 
-@available(*, deprecated, renamed: "MultiplexConfigsHandler")
-public typealias MultiplexRemoteConfigsHandler = MultiplexConfigsHandler
+/// Configuration store that multiplexes operations across multiple stores
+public struct MultiplexConfigStore: ConfigStore {
+    private let stores: [ConfigStore]
 
-/// Configuration handler that multiplexes operations across multiple handlers
-public struct MultiplexConfigsHandler: ConfigsHandler {
-    private let handlers: [ConfigsHandler]
-
-    /// Creates a multiplex handler with an array of handlers
-    public init(handlers: [ConfigsHandler]) {
-        self.handlers = handlers
+    /// Creates a multiplex store with an array of stores
+    public init(stores: [ConfigStore]) {
+        self.stores = stores
     }
 
-    /// Creates a multiplex handler with variadic handlers
-    public init(_ handlers: ConfigsHandler...) {
-        self.init(handlers: handlers)
+    /// Creates a multiplex store with variadic stores
+    public init(_ stores: ConfigStore...) {
+        self.init(stores: stores)
     }
 
-    /// Retrieves value from the first handler that has it
-    public func value(for key: String) -> String? {
-        for handler in handlers {
-            if let value = handler.value(for: key) {
-                return value
+    /// Retrieves value from the first store that has it
+    public func get(_ key: String) throws -> String? {
+        var errors: [Error] = []
+        for store in stores {
+            do {
+                if let value = try store.get(key) {
+                    return value
+                }
+            } catch {
+                errors.append(error)
             }
+        }
+        if !errors.isEmpty {
+            throw errors.count == 1 ? errors[0] : Errors(errors: errors)
         }
         return nil
     }
 
-    /// Fetches from all handlers and completes when all are done
+    /// Fetches from all stores and completes when all are done
     public func fetch(completion: @escaping (Error?) -> Void) {
-        let multiplexCompletion = MultiplexCompletion(count: handlers.count, completion: completion)
-        for handler in handlers {
-            handler.fetch { error in
+        let multiplexCompletion = MultiplexCompletion(count: stores.count, completion: completion)
+        for store in stores {
+            store.fetch { error in
                 multiplexCompletion.call(with: error)
             }
         }
     }
 
-    /// Registers listeners on all handlers
-    public func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
-        let cancellables = handlers.compactMap { $0.listen(listener) }
-        return cancellables.isEmpty ? nil : ConfigsCancellation {
+    public func exists(_ key: String) throws -> Bool {
+        var errors: [Error] = []
+        for store in stores {
+            do {
+                if try store.exists(key) {
+                    return true
+                }
+            } catch {
+                errors.append(error)
+            }
+        }
+        if !errors.isEmpty {
+            throw errors.count == 1 ? errors[0] : Errors(errors: errors)
+        }
+        return false
+    }
+    
+    /// Registers listeners on all stores
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+        let cancellables = stores.compactMap { $0.onChange(listener) }
+        return cancellables.isEmpty ? nil : Cancellation {
             cancellables.forEach { $0.cancel() }
         }
     }
 
-    /// Returns union of keys from all handlers
-    public func allKeys() -> Set<String>? {
-        handlers.reduce(into: Set<String>?.none) { result, handler in
-            if let keys = handler.allKeys() {
+    /// Returns union of keys from all stores
+    public func keys() -> Set<String>? {
+        stores.reduce(into: Set<String>?.none) { result, store in
+            if let keys = store.keys() {
                 if result == nil {
                     result = []
                 }
@@ -57,17 +79,17 @@ public struct MultiplexConfigsHandler: ConfigsHandler {
         }
     }
 	
-	/// Supports writing if any handler supports it
-	public var supportWriting: Bool {
-		handlers.contains(where: \.supportWriting)
+	/// Supports writing if any store supports it
+	public var isWritable: Bool {
+		stores.contains(where: \.isWritable)
 	}
 
-    /// Writes to all handlers, collecting any errors
-    public func writeValue(_ value: String?, for key: String) throws {
+    /// Writes to all stores, collecting any errors
+    public func set(_ value: String?, for key: String) throws {
         var errors: [Error] = []
-        for handler in handlers {
+        for store in stores {
             do {
-                try handler.writeValue(value, for: key)
+                try store.set(value, for: key)
             } catch {
                 errors.append(error)
             }
@@ -77,12 +99,12 @@ public struct MultiplexConfigsHandler: ConfigsHandler {
         }
     }
 
-    /// Clears all handlers, collecting any errors
-    public func clear() throws {
+    /// Clears all stores, collecting any errors
+    public func removeAll() throws {
         var errors: [Error] = []
-        for handler in handlers {
+        for store in stores {
             do {
-                try handler.clear()
+                try store.removeAll()
             } catch {
                 errors.append(error)
             }
@@ -92,9 +114,9 @@ public struct MultiplexConfigsHandler: ConfigsHandler {
         }
     }
 
-    /// Error type that wraps multiple errors from handlers
+    /// Error type that wraps multiple errors from stores
     public struct Errors: Error {
-        /// The collection of errors from different handlers
+        /// The collection of errors from different stores
         public let errors: [Error?]
     }
 }
@@ -123,21 +145,21 @@ final class MultiplexCompletion {
             switch errors.count {
             case 0: error = nil
             case 1: error = errors[0]
-            default: error = MultiplexConfigsHandler.Errors(errors: errors)
+            default: error = MultiplexConfigStore.Errors(errors: errors)
             }
             completion(error)
         }
     }
 }
 
-public extension ConfigsHandler where Self == MultiplexConfigsHandler {
-    /// Creates a multiplex configuration handler with an array of handlers
-    static func multiple(_ handlers: [ConfigsHandler]) -> MultiplexConfigsHandler {
-        MultiplexConfigsHandler(handlers: handlers)
+public extension ConfigStore where Self == MultiplexConfigStore {
+    /// Creates a multiplex configuration store with an array of stores
+    static func multiple(_ stores: [ConfigStore]) -> MultiplexConfigStore {
+        MultiplexConfigStore(stores: stores)
     }
 
-    /// Creates a multiplex configuration handler with variadic handlers
-    static func multiple(_ handlers: ConfigsHandler...) -> MultiplexConfigsHandler {
-        MultiplexConfigsHandler(handlers: handlers)
+    /// Creates a multiplex configuration store with variadic stores
+    static func multiple(_ stores: ConfigStore...) -> MultiplexConfigStore {
+        MultiplexConfigStore(stores: stores)
     }
 }

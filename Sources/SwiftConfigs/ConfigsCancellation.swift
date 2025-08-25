@@ -1,10 +1,7 @@
 import Foundation
 
-@available(*, deprecated, renamed: "ConfigsCancellation")
-public typealias RemoteConfigsCancellation = ConfigsCancellation
-
 /// Represents a cancellable configuration listener subscription
-public struct ConfigsCancellation {
+public struct Cancellation {
     private let _cancel: () -> Void
 
     /// Creates a cancellation token with a cancel closure

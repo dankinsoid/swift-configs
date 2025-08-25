@@ -1,124 +1,187 @@
 import Foundation
 
 /// Protocol that defines permission types for configuration keys
-public protocol ConfigKeyPermission {
+public protocol KeyAccess {
     /// Whether this permission type supports writing operations
-    static var supportWriting: Bool { get }
+    static var isWritable: Bool { get }
 }
 
-public typealias ReadOnlyConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
-public typealias ReadWriteConfigKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
+public typealias ROKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
+public typealias RWKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
 public extension Configs {
+
     struct Keys {
+    
         public init() {}
 
         /// Read-only permission type for configuration keys
-        public enum ReadOnly: ConfigKeyPermission {
+        public enum ReadOnly: KeyAccess {
             /// Read-only keys do not support writing
-            public static var supportWriting: Bool { false }
+            public static var isWritable: Bool { false }
         }
 
         /// Read-write permission type for configuration keys
-        public enum ReadWrite: ConfigKeyPermission {
+        public enum ReadWrite: KeyAccess {
             /// Read-write keys support writing operations
-            public static var supportWriting: Bool { true }
+            public static var isWritable: Bool { true }
         }
 
         /// A concrete implementation of ConfigKey with specified value type and permission
-        public struct Key<Value, Permission: ConfigKeyPermission> {
+        public struct Key<Value, Access: KeyAccess> {
+
             public let name: String
-            private let _get: (ConfigsSystem.Handler) -> Value
-            private let _set: (ConfigsSystem.Handler, Value) -> Void
-            private let _remove: (ConfigsSystem.Handler) throws -> Void
-            private let _exists: (ConfigsSystem.Handler) -> Bool
-            private let _listen: (ConfigsSystem.Handler, @escaping (Value) -> Void) -> ConfigsCancellation
+            private let _get: (StoreRegistry) -> Value
+            private let _set: (StoreRegistry, Value) -> Void
+            private let _remove: (StoreRegistry) throws -> Void
+            private let _exists: (StoreRegistry) -> Bool
+            private let _listen: (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
 
             /// Creates a new configuration key with custom behavior
             public init(
                 _ key: String,
-                get: @escaping (ConfigsSystem.Handler) -> Value,
-                set: @escaping (ConfigsSystem.Handler, Value) -> Void,
-                remove: @escaping (ConfigsSystem.Handler) throws -> Void,
-                exists: @escaping (ConfigsSystem.Handler) -> Bool,
-                listen: @escaping (ConfigsSystem.Handler, @escaping (Value) -> Void) -> ConfigsCancellation
+                get: @escaping (StoreRegistry) -> Value,
+                set: @escaping (StoreRegistry, Value) -> Void,
+                delete: @escaping (StoreRegistry) throws -> Void,
+                exists: @escaping (StoreRegistry) -> Bool,
+                onChange: @escaping (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
             ) {
                 name = key
                 _get = get
                 _set = set
-                _remove = remove
+                _remove = delete
                 _exists = exists
-                _listen = listen
+                _listen = onChange
             }
 
-            public func get(handler: ConfigsSystem.Handler) -> Value {
-                _get(handler)
+            public func get(registry: StoreRegistry) -> Value {
+                _get(registry)
             }
 
-            public func set(handler: ConfigsSystem.Handler, _ newValue: Value) {
-                _set(handler, newValue)
+            public func set(registry: StoreRegistry, _ newValue: Value) {
+                _set(registry, newValue)
             }
 
-            public func remove(handler: ConfigsSystem.Handler) throws {
-                try _remove(handler)
+            public func delete(registry: StoreRegistry) {
+                try? _remove(registry)
             }
 
-            public func exists(handler: ConfigsSystem.Handler) -> Bool {
-                _exists(handler)
+            public func exists(registry: StoreRegistry) -> Bool {
+                _exists(registry)
             }
 
-            public func listen(handler: ConfigsSystem.Handler, _ observer: @escaping (Value) -> Void) -> ConfigsCancellation {
-                _listen(handler, observer)
+            public func onChange(registry: StoreRegistry, _ observer: @escaping (Value) -> Void) -> Cancellation {
+                _listen(registry, observer)
+            }
+            
+            public func map<T>(
+                _ transform: @escaping (Value) -> T,
+                _ reverseTransform: @escaping (T) -> Value
+            ) -> Configs.Keys.Key<T, Access> {
+                Configs.Keys.Key<T, Access>(
+                    name,
+                    get: { registry in
+                        transform(self.get(registry: registry))
+                    },
+                    set: { registry, newValue in
+                        self.set(registry: registry, reverseTransform(newValue))
+                    },
+                    delete: { registry in
+                        self.delete(registry: registry)
+                    },
+                    exists: { registry in
+                        self.exists(registry: registry)
+                    },
+                    onChange: { registry, observer in
+                        self.onChange(registry: registry) { newValue in
+                            observer(transform(newValue))
+                        }
+                    }
+                )
             }
         }
     }
 }
 
 public extension Configs.Keys.Key {
+
     init(
         _ name: String,
-        handler: @escaping (ConfigsSystem.Handler) -> ConfigsHandler,
+        store: @escaping (StoreRegistry) -> ConfigStore,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool
     ) {
-        self.init(name) { h in
-            if let value = handler(h).value(for: name), let decoded = (value as? Value) ?? transformer.decode(value.description) {
-                return decoded
+        self.init(name) { registry in
+            let store = store(registry)
+            do {
+                if let value = try store.get(name, as: transformer) {
+                    return value
+                }
+            } catch {
+#if DEBUG
+                fatalError("Failed to retrieve config value for key '\(name)': \(error)")
+#endif
             }
             let result = defaultValue()
-            if cacheDefaultValue, let value = transformer.encode(result) {
-                try? handler(h).writeValue(value, for: name)
+            do {
+                if cacheDefaultValue, let value = try transformer.encode(result) {
+                    try store.set(value, for: name)
+                }
+            } catch {
+#if DEBUG
+                fatalError("Failed to cache default config value for key '\(name)': \(error)")
+#endif
             }
             return result
-        } set: { h, newValue in
-            if let value = transformer.encode(newValue) {
-                try? handler(h).writeValue(value, for: name)
+        } set: { registry, newValue in
+            let store = store(registry)
+            do {
+                try store.set(transformer.encode(newValue), for: name)
+            } catch {
+#if DEBUG
+                fatalError("Failed to set config value for key '\(name)': \(error)")
+#endif
             }
-        } remove: { h in
-            try handler(h).writeValue(nil, for: name)
-        } exists: { h in
-            handler(h).value(for: name) != nil
-        } listen: { h, observer in
-            let cancellation = handler(h).listen { [weak h] in
-                guard let h else { return }
-                observer(handler(h).value(for: name, as: transformer) ?? defaultValue())
+        } delete: { registry in
+            try store(registry).set(nil, for: name)
+        } exists: { registry in
+            let store = store(registry)
+            do {
+                return try store.exists(name)
+            } catch {
+                #if DEBUG
+                fatalError("Failed to check existence of config key '\(name)': \(error)")
+                #endif
+                return false
             }
-            return cancellation ?? ConfigsCancellation {}
+        } onChange: { registry, observer in
+            let store = store(registry)
+            let cancellation = store.onChange { [weak store] in
+                guard let store else { return }
+                do {
+                    try observer(store.get(name, as: transformer) ?? defaultValue())
+                } catch {
+#if DEBUG
+                    fatalError("Failed to retrieve updated config value for key '\(name)': \(error)")
+#endif
+                }
+            }
+            return cancellation ?? Cancellation {}
         }
     }
 
-    /// Creates a configuration key with a specific handler and transformer
+    /// Creates a configuration key with a specific store and transformer
     init(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) {
         self.init(
             key,
-            handler: { _ in handler },
+            store: { _ in store },
             as: transformer,
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -128,14 +191,14 @@ public extension Configs.Keys.Key {
     /// Creates a configuration key for a specific category with a transformer
     init(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) {
         self.init(
             key,
-            handler: { $0.handler(for: category) },
+            store: { $0.store(for: category) },
             as: transformer,
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -146,18 +209,18 @@ public extension Configs.Keys.Key {
     ///
     /// - Parameters:
     ///   - key: The key string
-    ///   - handler: The configuration handler
+    ///   - store: The configuration store
     ///   - defaultValue: The default value to use if the key is not found
     ///   - cacheDefaultValue: Whether to cache the default value when first accessed
     init(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where Value: LosslessStringConvertible {
         self.init(
             key,
-            handler: { _ in handler },
+            store: { _ in store },
             as: .stringConvertable,
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -167,13 +230,13 @@ public extension Configs.Keys.Key {
     /// Creates an optional configuration key for LosslessStringConvertible values
     init<T>(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where T: LosslessStringConvertible, Value == T? {
         self.init(
             key,
-            handler: handler,
+            store: store,
             as: .optional(.stringConvertable),
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -183,13 +246,13 @@ public extension Configs.Keys.Key {
     /// Creates a configuration key in a category for LosslessStringConvertible values
     init(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where Value: LosslessStringConvertible {
         self.init(
             key,
-            handler: { $0.handler(for: category) },
+            store: { $0.store(for: category) },
             as: .stringConvertable,
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -199,13 +262,13 @@ public extension Configs.Keys.Key {
     /// Creates an optional configuration key in a category for LosslessStringConvertible values
     init<T>(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where T: LosslessStringConvertible, Value == T? {
         self.init(
             key,
-            handler: { $0.handler(for: category) },
+            store: { $0.store(for: category) },
             as: .optional(.stringConvertable),
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -215,13 +278,13 @@ public extension Configs.Keys.Key {
     /// Creates a configuration key for RawRepresentable values
     init(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
         self.init(
             key,
-            handler: handler,
+            store: store,
             as: .rawRepresentable,
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -235,7 +298,7 @@ public extension Configs.Keys.Key {
     ///   - default: The default value to use if the key is not found.
     init(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
@@ -255,7 +318,7 @@ public extension Configs.Keys.Key {
     ///   - default: The default value to use if the key is not found.
     init<T>(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
@@ -275,13 +338,13 @@ public extension Configs.Keys.Key {
     ///   - default: The default value to use if the key is not found.
     init<T>(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
     ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
         self.init(
             key,
-            handler: handler,
+            store: store,
             as: .optional(.rawRepresentable),
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -291,7 +354,7 @@ public extension Configs.Keys.Key {
     @_disfavoredOverload
     init(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
@@ -299,7 +362,7 @@ public extension Configs.Keys.Key {
     ) where Value: Codable {
         self.init(
             key,
-            handler: handler,
+            store: store,
             as: .json(decoder: decoder, encoder: encoder),
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue
@@ -315,7 +378,7 @@ public extension Configs.Keys.Key {
     @_disfavoredOverload
     init(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
@@ -339,7 +402,7 @@ public extension Configs.Keys.Key {
     @_disfavoredOverload
     init<T>(
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
@@ -363,7 +426,7 @@ public extension Configs.Keys.Key {
     @_disfavoredOverload
     init<T>(
         _ key: String,
-        handler: ConfigsHandler,
+        store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
@@ -371,7 +434,7 @@ public extension Configs.Keys.Key {
     ) where T: Codable, T? == Value {
         self.init(
             key,
-            handler: handler,
+            store: store,
             as: .optional(.json(decoder: decoder, encoder: encoder)),
             default: defaultValue(),
             cacheDefaultValue: cacheDefaultValue

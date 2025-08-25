@@ -2,11 +2,13 @@ import Foundation
 
 /// Protocol for configuration property wrappers
 public protocol ConfigWrapper<Value> {
+
     associatedtype Value
     /// The configuration key permission type
-    associatedtype Permission: ConfigKeyPermission
+    associatedtype Access: KeyAccess
 
-    typealias Key = Configs.Keys.Key<Value, Permission>
+    typealias Key = Configs.Keys.Key<Value, Access>
+
     /// The configs instance used for operations
     var configs: Configs { get }
     /// The configuration key
@@ -29,7 +31,7 @@ public extension ConfigWrapper {
 
 /// Property wrapper for read-only configuration values
 @propertyWrapper
-public struct ReadOnlyConfig<Value>: ConfigWrapper {
+public struct ROConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 
@@ -50,7 +52,7 @@ public struct ReadOnlyConfig<Value>: ConfigWrapper {
 
 /// Property wrapper for read-write configuration values
 @propertyWrapper
-public struct ReadWriteConfig<Value>: ConfigWrapper {
+public struct RWConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
@@ -74,28 +76,28 @@ public struct ReadWriteConfig<Value>: ConfigWrapper {
     }
 
     /// Removes the configuration value
-    public func remove() throws {
-        try configs.remove(key)
+    public func delete() {
+        configs.delete(key)
     }
 }
 
-@available(*, deprecated, renamed: "ReadOnlyConfig")
-public typealias Config<Value> = ReadOnlyConfig<Value>
+@available(*, deprecated, renamed: "ROConfig")
+public typealias Config<Value> = ROConfig<Value>
 
-@available(*, deprecated, renamed: "ReadWriteConfig")
-public typealias WritableConfig<Value> = ReadWriteConfig<Value>
+@available(*, deprecated, renamed: "RWConfig")
+public typealias WritableConfig<Value> = RWConfig<Value>
 
 public extension ConfigWrapper where Value: LosslessStringConvertible {
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false
     ) {
         self.init(
             Key(
                 key,
-                handler: { $0.handler(for: category) },
+                store: { $0.store(for: category) },
                 as: .stringConvertable,
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
@@ -109,7 +111,7 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false
     ) {
         self.init(
@@ -139,7 +141,7 @@ public extension ConfigWrapper where Value: Codable {
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
@@ -161,7 +163,7 @@ public extension ConfigWrapper {
     init<T: LosslessStringConvertible>(
         wrappedValue _: @escaping @autoclosure () -> Value = nil,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false
     ) where Value == T? {
         self.init(
@@ -179,7 +181,7 @@ public extension ConfigWrapper {
     init<T: RawRepresentable>(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
@@ -207,7 +209,7 @@ public extension ConfigWrapper {
     init<T: Codable>(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
-        in category: ConfigsCategory,
+        in category: ConfigCategory,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
@@ -226,6 +228,6 @@ public extension ConfigWrapper {
 }
 
 #if compiler(>=5.6)
-    extension ReadOnlyConfig: Sendable where Value: Sendable {}
-    extension ReadWriteConfig: Sendable where Value: Sendable {}
+    extension ROConfig: Sendable where Value: Sendable {}
+    extension RWConfig: Sendable where Value: Sendable {}
 #endif

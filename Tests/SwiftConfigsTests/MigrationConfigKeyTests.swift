@@ -3,17 +3,17 @@ import XCTest
 
 final class MigrationConfigKeyTests: XCTestCase {
     
-    var handler: InMemoryConfigsHandler!
+    var store: InMemoryConfigStore!
     
     override func setUp() {
         super.setUp()
-        handler = InMemoryConfigsHandler()
-        ConfigsSystem.bootstrap([.default: handler])
+        store = InMemoryConfigStore()
+        ConfigSystem.bootstrap([.default: store])
     }
     
     override func tearDown() {
         super.tearDown()
-        handler = nil
+        store = nil
     }
     
     // MARK: - Basic Migration Tests
@@ -22,9 +22,9 @@ final class MigrationConfigKeyTests: XCTestCase {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
@@ -33,24 +33,24 @@ final class MigrationConfigKeyTests: XCTestCase {
         }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "migrated_old_value")
         // Check that value was written to new key
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "migrated_old_value")
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "migrated_old_value")
         // Check that old key was removed
-        XCTAssertFalse(oldKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertFalse(oldKey.exists(store: ConfigSystem.store))
     }
     
     func testMigrationReturnsNewValue_WhenBothKeysExist() {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
-        handler.set("new_value", for: newKey)
+        store.set("old_value", for: oldKey)
+        store.set("new_value", for: newKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
@@ -59,13 +59,13 @@ final class MigrationConfigKeyTests: XCTestCase {
         }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "new_value")
         // Old key should still exist (migration didn't happen)
-        XCTAssertTrue(oldKey.exists(handler: ConfigsSystem.handler))
-        XCTAssertEqual(oldKey.get(handler: ConfigsSystem.handler), "old_value")
+        XCTAssertTrue(oldKey.exists(store: ConfigSystem.store))
+        XCTAssertEqual(oldKey.get(store: ConfigSystem.store), "old_value")
     }
     
     func testMigrationReturnsDefaultValue_WhenNeitherKeyExists() {
@@ -73,7 +73,7 @@ final class MigrationConfigKeyTests: XCTestCase {
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
@@ -82,7 +82,7 @@ final class MigrationConfigKeyTests: XCTestCase {
         }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "new_default")
@@ -94,70 +94,70 @@ final class MigrationConfigKeyTests: XCTestCase {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .writeToNew
         ) { $0.uppercased() }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "OLD_VALUE")
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "OLD_VALUE")
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "OLD_VALUE")
         // Old key should still exist
-        XCTAssertTrue(oldKey.exists(handler: ConfigsSystem.handler))
-        XCTAssertEqual(oldKey.get(handler: ConfigsSystem.handler), "old_value")
+        XCTAssertTrue(oldKey.exists(store: ConfigSystem.store))
+        XCTAssertEqual(oldKey.get(store: ConfigSystem.store), "old_value")
     }
     
     func testMigrationPolicy_RemoveOldOnly() {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .removeOld
         ) { $0.uppercased() }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "OLD_VALUE")
         // New key should not be written to
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "new_default")
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "new_default")
         // Old key should be removed
-        XCTAssertFalse(oldKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertFalse(oldKey.exists(store: ConfigSystem.store))
     }
     
     func testMigrationPolicy_NoAction() {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: []
         ) { $0.uppercased() }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "OLD_VALUE")
         // New key should not be written to
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "new_default")
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "new_default")
         // Old key should still exist
-        XCTAssertTrue(oldKey.exists(handler: ConfigsSystem.handler))
-        XCTAssertEqual(oldKey.get(handler: ConfigsSystem.handler), "old_value")
+        XCTAssertTrue(oldKey.exists(store: ConfigSystem.store))
+        XCTAssertEqual(oldKey.get(store: ConfigSystem.store), "old_value")
     }
     
     // MARK: - Type Migration Tests
@@ -166,9 +166,9 @@ final class MigrationConfigKeyTests: XCTestCase {
         // Arrange
         let oldBoolKey = TestKeys().oldBoolKey
         let newStringKey = TestKeys().newStringKey
-        handler.set(true, for: oldBoolKey)
+        store.set(true, for: oldBoolKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldBoolKey,
             to: newStringKey,
             firstReadPolicy: .default
@@ -177,33 +177,33 @@ final class MigrationConfigKeyTests: XCTestCase {
         }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "enabled")
-        XCTAssertEqual(newStringKey.get(handler: ConfigsSystem.handler), "enabled")
-        XCTAssertFalse(oldBoolKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertEqual(newStringKey.get(store: ConfigSystem.store), "enabled")
+        XCTAssertFalse(oldBoolKey.exists(store: ConfigSystem.store))
     }
     
     func testMigrationWithSameType() {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().anotherStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         )
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "old_value")
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "old_value")
-        XCTAssertFalse(oldKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "old_value")
+        XCTAssertFalse(oldKey.exists(store: ConfigSystem.store))
     }
     
     // MARK: - KeyPath Migration Tests
@@ -211,16 +211,16 @@ final class MigrationConfigKeyTests: XCTestCase {
     func testMigrationWithKeyPaths() {
         // Arrange
         let testKeys = TestKeys()
-        handler.set("old_value", for: testKeys.oldStringKey)
+        store.set("old_value", for: testKeys.oldStringKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: testKeys.oldStringKey,
             to: testKeys.newStringKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "OLD_VALUE")
@@ -229,16 +229,16 @@ final class MigrationConfigKeyTests: XCTestCase {
     func testSameTypeMigrationWithKeyPaths() {
         // Arrange
         let testKeys = TestKeys()
-        handler.set("old_value", for: testKeys.oldStringKey)
+        store.set("old_value", for: testKeys.oldStringKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: testKeys.oldStringKey,
             to: testKeys.anotherStringKey,
             firstReadPolicy: .default
         )
         
         // Act
-        let result = migrationKey.get(handler: ConfigsSystem.handler)
+        let result = migrationKey.get(store: ConfigSystem.store)
         
         // Assert
         XCTAssertEqual(result, "old_value")
@@ -250,20 +250,20 @@ final class MigrationConfigKeyTests: XCTestCase {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         // Act
-        migrationKey.set(handler: ConfigsSystem.handler, "set_value")
+        migrationKey.set(store: ConfigSystem.store, "set_value")
         
         // Assert
-        XCTAssertEqual(newKey.get(handler: ConfigsSystem.handler), "set_value")
-        XCTAssertEqual(migrationKey.get(handler: ConfigsSystem.handler), "set_value")
+        XCTAssertEqual(newKey.get(store: ConfigSystem.store), "set_value")
+        XCTAssertEqual(migrationKey.get(store: ConfigSystem.store), "set_value")
     }
     
     func testMigrationKeyExists() {
@@ -271,74 +271,74 @@ final class MigrationConfigKeyTests: XCTestCase {
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         // Test when neither exists
-        XCTAssertFalse(migrationKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertFalse(migrationKey.exists(store: ConfigSystem.store))
         
         // Test when only old exists
-        handler.set("old_value", for: oldKey)
-        XCTAssertTrue(migrationKey.exists(handler: ConfigsSystem.handler))
+        store.set("old_value", for: oldKey)
+        XCTAssertTrue(migrationKey.exists(store: ConfigSystem.store))
         
         // Test when only new exists
-        try? handler.clear()
-        handler.set("new_value", for: newKey)
-        XCTAssertTrue(migrationKey.exists(handler: ConfigsSystem.handler))
+        try? store.removeAll()
+        store.set("new_value", for: newKey)
+        XCTAssertTrue(migrationKey.exists(store: ConfigSystem.store))
         
         // Test when both exist
-        handler.set("old_value", for: oldKey)
-        XCTAssertTrue(migrationKey.exists(handler: ConfigsSystem.handler))
+        store.set("old_value", for: oldKey)
+        XCTAssertTrue(migrationKey.exists(store: ConfigSystem.store))
     }
     
     func testMigrationKeyRemove() {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
-        handler.set("new_value", for: newKey)
+        store.set("old_value", for: oldKey)
+        store.set("new_value", for: newKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         // Act
-        try? migrationKey.remove(handler: ConfigsSystem.handler)
+        try? migrationKey.delete(store: ConfigSystem.store)
         
         // Assert
-        XCTAssertFalse(oldKey.exists(handler: ConfigsSystem.handler))
-        XCTAssertFalse(newKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertFalse(oldKey.exists(store: ConfigSystem.store))
+        XCTAssertFalse(newKey.exists(store: ConfigSystem.store))
     }
     
     func testMigrationKeyRemoveWhenOldKeyRemovalFails() {
-        // Arrange - Create a mock handler that throws on remove for specific key
-        let throwingHandler = ThrowingRemoveHandler()
+        // Arrange - Create a mock store that throws on delete for specific key
+        let throwingStore = ThrowingRemoveStore()
         let oldKey = Configs.Keys.RWKey<String>("throwing_key", in: .default, default: "default")
         let newKey = TestKeys().newStringKey
         
-        ConfigsSystem.bootstrap([.default: throwingHandler])
-        defer { ConfigsSystem.bootstrap([.default: handler]) }
+        ConfigSystem.bootstrap([.default: throwingStore])
+        defer { ConfigSystem.bootstrap([.default: store]) }
         
-        try? throwingHandler.writeValue("new_value", for: newKey.name)
+        try? throwingStore.set("new_value", for: newKey.name)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         // Act & Assert
-        XCTAssertThrowsError(try migrationKey.remove(handler: ConfigsSystem.handler))
+        XCTAssertThrowsError(try migrationKey.delete(store: ConfigSystem.store))
         // Due to the implementation, new key gets removed even when old key removal fails
-        // This is because the implementation calls newKey.remove in the catch block
-        // and the ThrowingRemoveHandler throws on any writeValue(nil, ...)
+        // This is because the implementation calls newKey.delete in the catch block
+        // and the ThrowingRemoveStore throws on any set(nil, ...)
         // So the assertion should check if new key still exists (it shouldn't be removed)
-        XCTAssertTrue(newKey.exists(handler: ConfigsSystem.handler))
+        XCTAssertTrue(newKey.exists(store: ConfigSystem.store))
     }
     
     // MARK: - MigrationFirstReadPolicy Tests
@@ -378,7 +378,7 @@ final class MigrationConfigKeyTests: XCTestCase {
     func testMigrationInConfigsInstance() {
         // Arrange
         let testKeys = TestKeys()
-        handler.set("old_value", for: testKeys.oldStringKey)
+        store.set("old_value", for: testKeys.oldStringKey)
         
         // Act
         let configs = Configs()
@@ -394,21 +394,21 @@ final class MigrationConfigKeyTests: XCTestCase {
         // Arrange
         let oldKey = TestKeys().oldStringKey
         let newKey = TestKeys().newStringKey
-        handler.set("old_value", for: oldKey)
+        store.set("old_value", for: oldKey)
         
-        let migrationKey = Configs.Keys.RWKey<String>.migraion(
+        let migrationKey = Configs.Keys.RWKey<String>.migration(
             from: oldKey,
             to: newKey,
             firstReadPolicy: .default
         ) { $0.uppercased() }
         
         var observedValues: [String] = []
-        let cancellation = migrationKey.listen(handler: ConfigsSystem.handler) { value in
+        let cancellation = migrationKey.onChange(store: ConfigSystem.store) { value in
             observedValues.append(value)
         }
         
         // Act
-        newKey.set(handler: ConfigsSystem.handler, "new_value")
+        newKey.set(store: ConfigSystem.store, "new_value")
         
         // Assert
         XCTAssertEqual(observedValues, ["new_value"])
@@ -442,7 +442,7 @@ private struct TestKeys {
     }
     
     var migrationKey: Configs.Keys.RWKey<String> {
-        Configs.Keys.RWKey<String>.migraion(
+        Configs.Keys.RWKey<String>.migration(
             from: oldStringKey,
             to: newStringKey,
             firstReadPolicy: .default
@@ -450,9 +450,9 @@ private struct TestKeys {
     }
 }
 
-private extension InMemoryConfigsHandler {
+private extension InMemoryConfigStore {
     func set<T>(_ value: T, for key: any ConfigKey<T>) {
-        try? writeValue(String(describing: value), for: key.name)
+        try? set(String(describing: value), for: key.name)
     }
     
     func clearValues() {
@@ -460,37 +460,37 @@ private extension InMemoryConfigsHandler {
     }
 }
 
-private class ThrowingRemoveHandler: ConfigsHandler {
+private class ThrowingRemoveStore: ConfigStore {
     private var storage: [String: String] = [:]
     
-    var supportWriting: Bool { true }
+    var isWritable: Bool { true }
     
     func fetch(completion: @escaping (Error?) -> Void) {
         completion(nil)
     }
     
-    func listen(_ listener: @escaping () -> Void) -> ConfigsCancellation? {
+    func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
         nil
     }
     
-    func value(for key: String) -> String? {
+    func get(_ key: String) -> String? {
         storage[key]
     }
     
-    func writeValue(_ value: String?, for key: String) throws {
+    func set(_ value: String?, for key: String) throws {
         if let value = value {
             storage[key] = value
         } else {
-            // This will throw for any remove operation
+            // This will throw for any delete operation
             throw TestError.removalFailed
         }
     }
     
-    func clear() throws {
+    func removeAll() throws {
         storage.removeAll()
     }
     
-    func allKeys() -> Set<String>? {
+    func keys() -> Set<String>? {
         Set(storage.keys)
     }
     

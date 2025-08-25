@@ -2,23 +2,23 @@
 import XCTest
 
 final class SwiftConfigsTests: XCTestCase {
+
     static var allTests = [
         ("testReadDefaultValue", testReadDefaultValue),
         ("testReadValue", testReadValue),
-        ("testRewriteValue", testRewriteValue),
         ("testListen", testListen),
         ("testDidFetch", testDidFetch),
         ("testFetchIfNeeded", testFetchIfNeeded),
-        ("testEnvironmentVariableHandler", testEnvironmentVariableHandler),
-        ("testFallbackConfigsHandler", testFallbackConfigsHandler),
-        ("testPrefixConfigsHandler", testPrefixConfigsHandler),
+        ("testEnvironmentVariableStore", testEnvironmentVariableStore),
+        ("testFallbackConfigStore", testFallbackConfigStore),
+        ("testPrefixConfigStore", testPrefixConfigStore),
     ]
 
-    var handler = InMemoryConfigsHandler()
+    var store = InMemoryConfigStore()
 
     override func setUp() {
         super.setUp()
-        ConfigsSystem.bootstrap([.default: handler])
+        ConfigSystem.bootstrap([.default: store])
     }
 
     func testReadDefaultValue() {
@@ -31,7 +31,7 @@ final class SwiftConfigsTests: XCTestCase {
 
     func testReadValue() {
         // Arrange
-        try? handler.writeValue("value", for: "key")
+        try? store.set("value", for: "key")
 
         // Act
         let value = Configs().testKey
@@ -40,7 +40,7 @@ final class SwiftConfigsTests: XCTestCase {
         XCTAssertEqual(value, "value")
     }
 
-    func testRewriteValue() {
+    func testReset() {
         // Act
         let value = Configs().with(\.testKey, "value").testKey
 
@@ -51,12 +51,12 @@ final class SwiftConfigsTests: XCTestCase {
     func testListen() {
         // Arrange
         var fetched = false
-        Configs().listen { _ in
+        Configs().onChange { _ in
             fetched = true
         }
 
         // Act
-        handler.values = ["key": "value"]
+        store.values = ["key": "value"]
 
         // Assert
         XCTAssertTrue(fetched)
@@ -67,16 +67,16 @@ final class SwiftConfigsTests: XCTestCase {
         let configs = Configs()
 
         // Act
-        let didFetch = configs.didFetch
+        let hasFetched = configs.hasFetched
 
         // Assert
-        XCTAssertFalse(didFetch)
+        XCTAssertFalse(hasFetched)
 
         // Act
-        handler.values = ["key": "value"]
+        store.values = ["key": "value"]
         try await configs.fetchIfNeeded()
         // Assert
-        XCTAssertTrue(configs.didFetch)
+        XCTAssertTrue(configs.hasFetched)
     }
 
     func testFetchIfNeeded() async throws {
@@ -84,97 +84,97 @@ final class SwiftConfigsTests: XCTestCase {
         let configs = Configs()
 
         // Act
-        handler.values = ["key": "value"]
+        store.values = ["key": "value"]
         let value = try await configs.fetchIfNeeded(Configs.Keys().testKey)
 
         // Assert
         XCTAssertEqual(value, "value")
     }
 
-    func testEnvironmentVariableHandler() {
+    func testEnvironmentVariableStore() {
         // Arrange
         let mockProcessInfo = MockProcessInfo()
         mockProcessInfo.environment = ["TEST_ENV_VAR": "test_value"]
-        let envHandler = EnvironmentVariableConfigsHandler(processInfo: mockProcessInfo)
+        let envStore = EnvironmentVariableConfigStore(processInfo: mockProcessInfo)
 
         // Act
-        let value = envHandler.value(for: "TEST_ENV_VAR")
-        let nonExistentValue = envHandler.value(for: "NON_EXISTENT")
-        let allKeys = envHandler.allKeys()
+        let value = envStore.get("TEST_ENV_VAR")
+        let nonExistentValue = envStore.get("NON_EXISTENT")
+        let keys = envStore.keys()
 
         // Assert
         XCTAssertEqual(value, "test_value")
         XCTAssertNil(nonExistentValue)
-        XCTAssertTrue(allKeys?.contains("TEST_ENV_VAR") ?? false)
+        XCTAssertTrue(keys?.contains("TEST_ENV_VAR") ?? false)
 
         // Test unsupported operations
-        XCTAssertThrowsError(try envHandler.writeValue("value", for: "key"))
-        XCTAssertThrowsError(try envHandler.clear())
+        XCTAssertThrowsError(try envStore.set("value", for: "key"))
+        XCTAssertThrowsError(try envStore.removeAll())
     }
 
-    func testFallbackConfigsHandler() {
+    func testFallbackConfigStore() throws {
         // Arrange
-        let readHandler = InMemoryConfigsHandler(["remote_key": "remote_value"])
-        let writeHandler = InMemoryConfigsHandler(["local_key": "local_value"])
-        let fallbackHandler = FallbackConfigsHandler(mainHandler: writeHandler, fallbackHandler: readHandler)
+        let readStore = InMemoryConfigStore(["remote_key": "remote_value"])
+        let writeStore = InMemoryConfigStore(["local_key": "local_value"])
+        let fallbackStore = MigrationConfigStore(mainStore: writeStore, fallbackStore: readStore)
 
-        // Test reading from read handler first
-        XCTAssertEqual(fallbackHandler.value(for: "remote_key"), "remote_value")
+        // Test reading from read store first
+        try XCTAssertEqual(fallbackStore.get("remote_key"), "remote_value")
 
-        // Test fallback to write handler
-        XCTAssertEqual(fallbackHandler.value(for: "local_key"), "local_value")
+        // Test migration to write store
+        try XCTAssertEqual(fallbackStore.get("local_key"), "local_value")
 
         // Test non-existent key
-        XCTAssertNil(fallbackHandler.value(for: "non_existent"))
+        try XCTAssertNil(fallbackStore.get("non_existent"))
 
-        // Test writing (should only write to write handler)
-        try? fallbackHandler.writeValue("new_value", for: "test_key")
-        XCTAssertEqual(writeHandler.value(for: "test_key"), "new_value")
-        XCTAssertNil(readHandler.value(for: "test_key"))
+        // Test writing (should only write to write store)
+        try? fallbackStore.set("new_value", for: "test_key")
+        XCTAssertEqual(writeStore.get("test_key"), "new_value")
+        XCTAssertNil(readStore.get("test_key"))
 
-        // Test allKeys combines both handlers
-        let allKeys = fallbackHandler.allKeys()
-        XCTAssertFalse(allKeys?.contains("remote_key") ?? false)
-        XCTAssertTrue(allKeys?.contains("local_key") ?? false)
+        // Test keys combines both stores
+        let keys = fallbackStore.keys()
+        XCTAssertFalse(keys?.contains("remote_key") ?? false)
+        XCTAssertTrue(keys?.contains("local_key") ?? false)
 
-        // Test clear only affects write handler
-        try? fallbackHandler.clear()
-        XCTAssertNil(writeHandler.value(for: "local_key"))
-        XCTAssertEqual(readHandler.value(for: "remote_key"), "remote_value")
+        // Test clear only affects write store
+        try? fallbackStore.removeAll()
+        XCTAssertNil(writeStore.get("local_key"))
+        XCTAssertEqual(readStore.get("remote_key"), "remote_value")
     }
 
-    func testPrefixConfigsHandler() {
+    func testPrefixConfigStore() throws {
         // Arrange
-        let underlyingHandler = InMemoryConfigsHandler(["app_user_name": "john", "app_user_age": "25", "other_key": "value"])
-        let prefixHandler = PrefixConfigsHandler(prefix: "app_", handler: underlyingHandler)
+        let underlyingStore = InMemoryConfigStore(["app_user_name": "john", "app_user_age": "25", "other_key": "value"])
+        let prefixStore = PrefixConfigStore(prefix: "app_", store: underlyingStore)
 
         // Test reading values with prefix
-        XCTAssertEqual(prefixHandler.value(for: "user_name"), "john")
-        XCTAssertEqual(prefixHandler.value(for: "user_age"), "25")
-        XCTAssertNil(prefixHandler.value(for: "other_key"))
-        XCTAssertNil(prefixHandler.value(for: "non_existent"))
+        try XCTAssertEqual(prefixStore.get("user_name"), "john")
+        try XCTAssertEqual(prefixStore.get("user_age"), "25")
+        try XCTAssertNil(prefixStore.get("other_key"))
+        try XCTAssertNil(prefixStore.get("non_existent"))
 
-        // Test allKeys returns only unprefixed keys for matching prefix
-        let allKeys = prefixHandler.allKeys()
-        XCTAssertEqual(allKeys?.count, 2)
-        XCTAssertTrue(allKeys?.contains("user_name") ?? false)
-        XCTAssertTrue(allKeys?.contains("user_age") ?? false)
-        XCTAssertFalse(allKeys?.contains("other_key") ?? true)
+        // Test keys returns only unprefixed keys for matching prefix
+        let keys = prefixStore.keys()
+        XCTAssertEqual(keys?.count, 2)
+        XCTAssertTrue(keys?.contains("user_name") ?? false)
+        XCTAssertTrue(keys?.contains("user_age") ?? false)
+        XCTAssertFalse(keys?.contains("other_key") ?? true)
 
         // Test writing adds prefix
-        try? prefixHandler.writeValue("doe", for: "user_surname")
-        XCTAssertEqual(underlyingHandler.value(for: "app_user_surname"), "doe")
-        XCTAssertEqual(prefixHandler.value(for: "user_surname"), "doe")
+        try prefixStore.set("doe", for: "user_surname")
+        XCTAssertEqual(underlyingStore.get("app_user_surname"), "doe")
+        try XCTAssertEqual(prefixStore.get("user_surname"), "doe")
 
         // Test clear only clears prefixed keys
-        try? prefixHandler.clear()
-        XCTAssertNil(underlyingHandler.value(for: "app_user_name"))
-        XCTAssertNil(underlyingHandler.value(for: "app_user_age"))
-        XCTAssertNil(underlyingHandler.value(for: "app_user_surname"))
-        XCTAssertEqual(underlyingHandler.value(for: "other_key"), "value")
+        try prefixStore.removeAll()
+        XCTAssertNil(underlyingStore.get("app_user_name"))
+        XCTAssertNil(underlyingStore.get("app_user_age"))
+        XCTAssertNil(underlyingStore.get("app_user_surname"))
+        XCTAssertEqual(underlyingStore.get("other_key"), "value")
 
-        // Test supportWriting delegates to underlying handler
-        XCTAssertEqual(prefixHandler.supportWriting, underlyingHandler.supportWriting)
+        // Test isWritable delegates to underlying store
+        XCTAssertEqual(prefixStore.isWritable, underlyingStore.isWritable)
     }
 }
 
@@ -188,7 +188,8 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 }
 
 private extension Configs.Keys {
-    var testKey: RWKey<String> {
-        RWKey("key", in: .default, default: "defaultValue")
+
+    var testKey: Key<String, ReadWrite> {
+        Key("key", in: .default, default: "defaultValue")
     }
 }
