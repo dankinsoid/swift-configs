@@ -336,7 +336,7 @@ final class ConfigStoreObserverTests: XCTestCase {
         registrationExpectation.expectedFulfillmentCount = 5
         notificationExpectation.expectedFulfillmentCount = 5
         let queue = DispatchQueue(label: "test.concurrent", attributes: .concurrent)
-        var cancellations: [Cancellation] = []
+        @Locked var cancellations: [Cancellation] = []
         
         // Act - Perform concurrent registrations
         for _ in 0..<5 {

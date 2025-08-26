@@ -10,7 +10,7 @@ final class SwiftConfigsTests: XCTestCase {
         ("testDidFetch", testDidFetch),
         ("testFetchIfNeeded", testFetchIfNeeded),
         ("testEnvironmentVariableStore", testEnvironmentVariableStore),
-        ("testFallbackConfigStore", testFallbackConfigStore),
+        ("testMigrationConfigStore", testMigrationConfigStore),
         ("testPrefixConfigStore", testPrefixConfigStore),
     ]
 
@@ -112,35 +112,35 @@ final class SwiftConfigsTests: XCTestCase {
         XCTAssertThrowsError(try envStore.removeAll())
     }
 
-    func testFallbackConfigStore() throws {
-        // Arrange
-        let readStore = InMemoryConfigStore(["remote_key": "remote_value"])
-        let writeStore = InMemoryConfigStore(["local_key": "local_value"])
-        let fallbackStore = MigrationConfigStore(mainStore: writeStore, fallbackStore: readStore)
+    func testMigrationConfigStore() throws {
+        // Arrange: legacy has "remote_key", new has "local_key"
+        let legacyStore = InMemoryConfigStore(["remote_key": "remote_value"])
+        let newStore = InMemoryConfigStore(["local_key": "local_value"])
+        let migrationStore = MigrationConfigStore(newStore: newStore, legacyStore: legacyStore)
 
-        // Test reading from read store first
-        try XCTAssertEqual(fallbackStore.get("remote_key"), "remote_value")
+        // Reads: prefer newStore, otherwise fall back to legacyStore
+        XCTAssertEqual(try migrationStore.get("remote_key"), "remote_value") // from legacy
+        XCTAssertEqual(try migrationStore.get("local_key"), "local_value")   // from new
 
-        // Test migration to write store
-        try XCTAssertEqual(fallbackStore.get("local_key"), "local_value")
+        // Non-existent
+        XCTAssertNil(try migrationStore.get("non_existent"))
 
-        // Test non-existent key
-        try XCTAssertNil(fallbackStore.get("non_existent"))
+        // Writes: only to newStore
+        try migrationStore.set("new_value", for: "test_key")
+        XCTAssertEqual(newStore.get("test_key"), "new_value")
+        XCTAssertNil(legacyStore.get("test_key"))
 
-        // Test writing (should only write to write store)
-        try? fallbackStore.set("new_value", for: "test_key")
-        XCTAssertEqual(writeStore.get("test_key"), "new_value")
-        XCTAssertNil(readStore.get("test_key"))
+        // Keys: union of both stores (plus newly written key in newStore)
+        let keys = migrationStore.keys() ?? []
+        XCTAssertTrue(keys.contains("remote_key"))
+        XCTAssertTrue(keys.contains("local_key"))
+        XCTAssertTrue(keys.contains("test_key"))
 
-        // Test keys combines both stores
-        let keys = fallbackStore.keys()
-        XCTAssertFalse(keys?.contains("remote_key") ?? false)
-        XCTAssertTrue(keys?.contains("local_key") ?? false)
-
-        // Test clear only affects write store
-        try? fallbackStore.removeAll()
-        XCTAssertNil(writeStore.get("local_key"))
-        XCTAssertEqual(readStore.get("remote_key"), "remote_value")
+        // removeAll() should clear only newStore (by design), legacy remains intact
+        try migrationStore.removeAll()
+        XCTAssertNil(newStore.get("local_key"))
+        XCTAssertNil(newStore.get("test_key"))
+        XCTAssertEqual(legacyStore.get("remote_key"), "remote_value")
     }
 
     func testPrefixConfigStore() throws {
