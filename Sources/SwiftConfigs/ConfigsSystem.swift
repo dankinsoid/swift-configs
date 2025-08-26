@@ -31,6 +31,9 @@ public enum ConfigSystem {
 	]
 
     static let registry = StoreRegistry(isPreview ? mockStores : defaultStores)
+#if DEBUG
+    @Locked private static var isBootstrapped = false
+#endif
 
 	/// Bootstraps the configuration system with a single store
 	/// 
@@ -38,8 +41,8 @@ public enum ConfigSystem {
 	/// Multiple calls will lead to undefined behavior.
 	///
 	/// - Parameter store: The configuration store to use
-	public static func bootstrap(_ store: ConfigStore) {
-		bootstrap([.default: store])
+	public static func bootstrap(_ store: ConfigStore, file: StaticString = #fileID, line: UInt = #line) {
+        bootstrap([.default: store], file: file, line: line)
 	}
 
 	/// Bootstraps the configuration system with category-specific stores
@@ -48,8 +51,12 @@ public enum ConfigSystem {
 	/// Multiple calls will lead to undefined behavior.
 	///
 	/// - Parameter stores: A dictionary mapping categories to their stores
-	public static func bootstrap(_ stores: [ConfigCategory: ConfigStore]) {
+    public static func bootstrap(_ stores: [ConfigCategory: ConfigStore], file: StaticString = #fileID, line: UInt = #line) {
         registry.stores = stores
+#if DEBUG
+        assert(!isBootstrapped, "ConfigSystem.bootstrap() can only be called once per program execution.", file: file, line: line)
+        isBootstrapped = true
+#endif
 	}
 
 	/// Bootstraps with default stores, overriding with provided stores
@@ -59,8 +66,8 @@ public enum ConfigSystem {
 	/// Can only be called once per program execution.
 	///
 	/// - Parameter stores: Custom stores to override defaults
-	public static func defaultBootstrap(_ stores: [ConfigCategory: ConfigStore]) {
-        registry.stores = stores.merging(isPreview ? mockStores : defaultStores) { new, _ in new }
+	public static func defaultBootstrap(_ stores: [ConfigCategory: ConfigStore], file: StaticString = #fileID, line: UInt = #line) {
+        bootstrap(stores.merging(isPreview ? mockStores : defaultStores) { new, _ in new }, file: file, line: line)
 	}
 }
 
