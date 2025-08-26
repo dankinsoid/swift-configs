@@ -3,9 +3,6 @@ import Foundation
     import Security
 #endif
 
-@available(*, deprecated, renamed: "ConfigSystem")
-public typealias RemoteConfigsSystem = ConfigSystem
-
 /// The `ConfigSystem` is a global facility where the default configs backend implementation (`ConfigStore`) can be
 /// configured. `ConfigSystem` is set up just once in a given program to set up the desired configs backend
 /// implementation.

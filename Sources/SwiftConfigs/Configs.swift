@@ -1,8 +1,5 @@
 import Foundation
 
-@available(*, deprecated, renamed: "Configs")
-public typealias RemoteConfigs = Configs
-
 /// A structure for handling configs and reading them from a configs provider.
 @dynamicMemberLookup
 public struct Configs {

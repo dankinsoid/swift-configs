@@ -81,12 +81,6 @@ public struct RWConfig<Value>: ConfigWrapper {
     }
 }
 
-@available(*, deprecated, renamed: "ROConfig")
-public typealias Config<Value> = ROConfig<Value>
-
-@available(*, deprecated, renamed: "RWConfig")
-public typealias WritableConfig<Value> = RWConfig<Value>
-
 public extension ConfigWrapper where Value: LosslessStringConvertible {
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
