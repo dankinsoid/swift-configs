@@ -37,7 +37,7 @@ import Foundation
 		/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
 		public init(
 			service: String? = nil,
-			class secClass: SecClass = .genericPassowrd,
+			class secClass: SecClass = .genericPassword,
 			attrAccessible: SecAttrAccessible = .afterFirstUnlock,
 			iCloudSync: Bool = false,
 			useSecureEnclave: Bool = false,
@@ -243,7 +243,7 @@ import Foundation
 
 			/// All available security classes
 			public static var allCases: [SecClass] {
-				[.genericPassowrd, .internetPassword, .certificate, .key, .identity]
+				[.genericPassword, .internetPassword, .certificate, .key, .identity]
 			}
 
 			public init(rawValue: CFString) {
@@ -251,7 +251,7 @@ import Foundation
 			}
 
 			/// The value that indicates a generic password item.
-			public static let genericPassowrd = SecClass(rawValue: kSecClassGenericPassword)
+			public static let genericPassword = SecClass(rawValue: kSecClassGenericPassword)
 			/// The value that indicates an Internet password item.
 			public static let internetPassword = SecClass(rawValue: kSecClassInternetPassword)
 			/// The value that indicates a certificate item.
@@ -425,7 +425,7 @@ extension ConfigStore where Self == KeychainConfigStore {
 	/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
 	public static func keychain(
 		service: String? = nil,
-		class secClass: KeychainConfigStore.SecClass = .genericPassowrd,
+		class secClass: KeychainConfigStore.SecClass = .genericPassword,
 		attrAccessible: KeychainConfigStore.SecAttrAccessible = .afterFirstUnlock,
 		iCloudSync: Bool = false,
 		useSecureEnclave: Bool = false,
