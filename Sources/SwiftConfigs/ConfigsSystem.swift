@@ -56,6 +56,7 @@ public enum ConfigSystem {
 #if DEBUG
         assert(!isBootstrapped, "ConfigSystem.bootstrap() can only be called once per program execution.", file: file, line: line)
         isBootstrapped = true
+        assert(!registry.didAccessStores, "ConfigSystem.bootstrap() must be called before accessing any configs.", file: file, line: line)
 #endif
 	}
 

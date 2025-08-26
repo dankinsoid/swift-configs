@@ -23,6 +23,9 @@ public final class StoreRegistry {
     private var didStartListen = false
     private var didStartFetch = false
     private var cancellation: Cancellation?
+#if DEBUG
+    @Locked var didAccessStores = false
+#endif
     
     /// Initializes with a set of category stores
     public init(_ stores: [ConfigCategory: ConfigStore]) {
@@ -84,7 +87,10 @@ public final class StoreRegistry {
     
     /// Gets the appropriate store for a category
     public func store(for category: ConfigCategory?) -> ConfigStore {
-        MultiplexConfigStore(
+#if DEBUG
+        didAccessStores = true
+#endif
+        return MultiplexConfigStore(
             stores: category.map { category in stores.compactMap { category == $0.key ? $0.value : nil } } ?? Array(stores.values)
         )
     }
