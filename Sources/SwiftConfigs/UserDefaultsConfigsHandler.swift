@@ -4,7 +4,7 @@ import Foundation
 public final class UserDefaultsConfigStore: ConfigStore {
 
     private let userDefaults: UserDefaults
-    private var listenHelper = ConfigStoreListeningHelper()
+    private var listenHelper = ConfigStoreObserver()
     private var notificationObserver: NSObjectProtocol?
 	
 	/// Shared standard UserDefaults configuration store

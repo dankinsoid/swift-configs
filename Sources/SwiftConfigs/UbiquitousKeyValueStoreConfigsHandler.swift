@@ -12,7 +12,7 @@
     public final class UbiquitousKeyValueStoreConfigStore: ConfigStore {
 
         private let ubiquitousStore: NSUbiquitousKeyValueStore
-        private let listenHelper = ConfigStoreListeningHelper()
+        private let listenHelper = ConfigStoreObserver()
         private var notificationObserver: NSObjectProtocol?
         private var lifecycleObservers: [NSObjectProtocol] = []
 
@@ -43,7 +43,7 @@
                 queue: .main
             ) { [weak self] _ in
                 guard let self else { return }
-                self.listenHelper.notifyChange { self.ubiquitousStore.string(forKey: $0) }
+                self.listenHelper.notifyChange(values: { self.ubiquitousStore.string(forKey: $0) })
             }
         }
 
@@ -118,7 +118,7 @@
             }
 
             // Notify listeners about the change
-            listenHelper.notifyChange { _ in nil }
+            listenHelper.notifyChange(values: { _ in nil })
         }
 
         public func keys() -> Set<String>? {

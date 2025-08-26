@@ -92,6 +92,11 @@ extension ConfigStore {
 	public func set<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
 		try set(value.flatMap(transformer.encode), for: key)
 	}
+
+    /// Determines whether a value exists for a given key
+    public func exists(_ key: String) throws -> Bool {
+        try get(key) != nil
+    }
 }
 
 extension ConfigStore where Self: AnyObject {

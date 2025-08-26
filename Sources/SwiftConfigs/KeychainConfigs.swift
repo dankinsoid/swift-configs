@@ -22,7 +22,7 @@ import Foundation
 		public let secureEnclaveAccessControl: SecureEnclaveAccessControl?
     
         // Observers for keychain changes
-        private let listenHelper = ConfigStoreListeningHelper()
+        private let listenHelper = ConfigStoreObserver()
 
 		/// Shared default keychain configuration store
 		public static var `default` = KeychainConfigStore()
@@ -168,7 +168,7 @@ import Foundation
 			}
 
 			// Notify observers
-            listenHelper.notifyChange { _ in nil }
+            listenHelper.notifyChange(values: { _ in nil })
 		}
 		
 		/// Keychain accessibility levels

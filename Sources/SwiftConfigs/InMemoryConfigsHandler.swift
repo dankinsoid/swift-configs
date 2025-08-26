@@ -13,7 +13,7 @@ public final class InMemoryConfigStore: ConfigStore {
                 _values = newValue
                 return _values
             }
-            listenHelper.notifyChange { newValues[$0] }
+            listenHelper.notifyChange(values: { newValues[$0] })
         }
     }
 	
@@ -22,7 +22,7 @@ public final class InMemoryConfigStore: ConfigStore {
 
     private var _values: [String: String]
     private let lock = ReadWriteLock()
-    private let listenHelper = ConfigStoreListeningHelper()
+    private let listenHelper = ConfigStoreObserver()
 
     /// Creates an in-memory configuration store
     /// - Parameter values: Initial configuration values
@@ -67,7 +67,7 @@ public final class InMemoryConfigStore: ConfigStore {
         lock.withWriterLock {
             _values = [:]
         }
-        listenHelper.notifyChange { _ in nil }
+        listenHelper.notifyChange(values: { _ in nil })
     }
 
     /// Registers a listener for in-memory value changes
