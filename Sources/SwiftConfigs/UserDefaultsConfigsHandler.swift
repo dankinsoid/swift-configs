@@ -2,9 +2,9 @@ import Foundation
 
 /// Configuration store backed by UserDefaults for persistent storage
 public final class UserDefaultsConfigStore: ConfigStore {
+
     private let userDefaults: UserDefaults
-    private var observers: [UUID: () -> Void] = [:]
-    private let lock = ReadWriteLock()
+    private var listenHelper = ConfigStoreListeningHelper()
     private var notificationObserver: NSObjectProtocol?
 	
 	/// Shared standard UserDefaults configuration store
@@ -43,8 +43,7 @@ public final class UserDefaultsConfigStore: ConfigStore {
     }
 
     private func notifyObservers() {
-        let currentObservers = lock.withReaderLock { observers.values }
-        currentObservers.forEach { $0() }
+        listenHelper.notifyChange(values: userDefaults.string)
     }
 
     // MARK: - ConfigStore Implementation
@@ -56,16 +55,12 @@ public final class UserDefaultsConfigStore: ConfigStore {
 
     /// Registers a listener for UserDefaults changes
     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-        let id = UUID()
-        lock.withWriterLockVoid {
-            observers[id] = listener
-        }
+        listenHelper.onChange(listener)
+    }
 
-        return Cancellation { [weak self] in
-            self?.lock.withWriterLockVoid {
-                self?.observers.removeValue(forKey: id)
-            }
-        }
+    /// Registers a listener for changes to a specific key
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        listenHelper.onChangeOfKey(key, value: userDefaults.string(forKey: key), listener)
     }
 
     /// Retrieves a string value from UserDefaults
@@ -110,6 +105,7 @@ public final class UserDefaultsConfigStore: ConfigStore {
 #endif
 
 extension ConfigStore where Self == UserDefaultsConfigStore {
+
 	/// Creates a standard UserDefaults configuration store
 	public static var userDefaults: UserDefaultsConfigStore {
 		.standard

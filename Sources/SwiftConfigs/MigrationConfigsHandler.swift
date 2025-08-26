@@ -52,6 +52,18 @@ public struct MigrationConfigStore: ConfigStore {
         }
     }
 
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        // Listen to both stores
+        let mainCancellation = mainStore.onChangeOfKey(key, listener)
+        let fallbackCancellation = fallbackStore.onChangeOfKey(key, listener)
+
+        let cancellables = [mainCancellation, fallbackCancellation].compactMap { $0 }
+
+        return cancellables.isEmpty ? nil : Cancellation {
+            cancellables.forEach { $0.cancel() }
+        }
+    }
+
     public func keys() -> Set<String>? {
 		if let keys = mainStore.keys() {
 			return keys.union(fallbackStore.keys() ?? [])

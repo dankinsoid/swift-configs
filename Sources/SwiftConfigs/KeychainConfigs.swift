@@ -7,6 +7,7 @@ import Foundation
 
 	/// Configuration store backed by iOS/macOS Keychain for secure storage
 	public final class KeychainConfigStore: ConfigStore {
+
 		/// Optional service identifier for keychain items
 		public let service: String?
 		/// Security class for keychain items
@@ -19,8 +20,9 @@ import Foundation
 		public let useSecureEnclave: Bool
 		/// Access control options when using Secure Enclave
 		public let secureEnclaveAccessControl: SecureEnclaveAccessControl?
-		private var observers: [UUID: () -> Void] = [:]
-		private let lock = ReadWriteLock()
+    
+        // Observers for keychain changes
+        private let listenHelper = ConfigStoreListeningHelper()
 
 		/// Shared default keychain configuration store
 		public static var `default` = KeychainConfigStore()
@@ -55,9 +57,9 @@ import Foundation
 		}
 
 		/// Retrieves a value from the keychain
-		public func get(_ key: String) -> String? {
+		public func get(_ key: String) throws -> String? {
 			let (_, item, status) = loadStatus(for: key)
-			return try? load(item: item, status: status)
+			return try load(item: item, status: status)
 		}
 
 		/// Waits for protected data to become available
@@ -67,16 +69,13 @@ import Foundation
 
 		/// Registers a listener for keychain changes
 		public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-			let id = UUID()
-			lock.withWriterLock {
-				observers[id] = listener
-			}
-			return Cancellation { [weak self] in
-				self?.lock.withWriterLockVoid {
-					self?.observers.removeValue(forKey: id)
-				}
-			}
+            listenHelper.onChange(listener)
 		}
+        
+        /// Registers a listener for changes to a specific key
+        public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+            listenHelper.onChangeOfKey(key, value: try? get(key), listener)
+        }
 
 		/// Returns all keychain keys for this store
 		public func keys() -> Set<String>? {
@@ -137,11 +136,8 @@ import Foundation
 				}
 			}
 
-			// Notify observers
-			lock.withWriterLock {
-				observers.values
-			}
-			.forEach { $0() }
+            // Notify observers
+            listenHelper.notifyChange(for: key, newValue: value)
 		}
         
         public func exists(_ key: String) throws -> Bool {
@@ -172,10 +168,7 @@ import Foundation
 			}
 
 			// Notify observers
-			lock.withWriterLock {
-				observers.values
-			}
-			.forEach { $0() }
+            listenHelper.notifyChange { _ in nil }
 		}
 		
 		/// Keychain accessibility levels

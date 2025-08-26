@@ -1,8 +1,5 @@
 import Foundation
 
-@available(*, deprecated, renamed: "InMemoryConfigStore")
-public typealias MockRemoteConfigStore = InMemoryConfigStore
-
 /// Configuration store that stores values in memory for testing and caching
 public final class InMemoryConfigStore: ConfigStore {
 
@@ -12,19 +9,20 @@ public final class InMemoryConfigStore: ConfigStore {
             lock.withReaderLock { _values }
         }
         set {
-            lock.withWriterLockVoid {
+            let newValues = lock.withWriterLock {
                 _values = newValue
-                observers.values.forEach { $0() }
+                return _values
             }
+            listenHelper.notifyChange { newValues[$0] }
         }
     }
 	
 	/// Shared in-memory configuration store instance
 	public static let shared = InMemoryConfigStore()
 
-    private var observers: [UUID: () -> Void] = [:]
     private var _values: [String: String]
     private let lock = ReadWriteLock()
+    private let listenHelper = ConfigStoreListeningHelper()
 
     /// Creates an in-memory configuration store
     /// - Parameter values: Initial configuration values
@@ -60,31 +58,26 @@ public final class InMemoryConfigStore: ConfigStore {
     public func set(_ value: String?, for key: String) throws {
         lock.withWriterLock {
             _values[key] = value
-            return observers.values
         }
-        .forEach { $0() }
+        listenHelper.notifyChange(for: key, newValue: value)
     }
 
     /// Clears all values from memory
     public func removeAll() throws {
         lock.withWriterLock {
             _values = [:]
-            return observers.values
         }
-        .forEach { $0() }
+        listenHelper.notifyChange { _ in nil }
     }
 
     /// Registers a listener for in-memory value changes
     public func onChange(_ observer: @escaping () -> Void) -> Cancellation? {
-        let id = UUID()
-        lock.withWriterLockVoid {
-            observers[id] = observer
-        }
-        return Cancellation { [weak self] in
-            self?.lock.withWriterLockVoid {
-                self?.observers.removeValue(forKey: id)
-            }
-        }
+        listenHelper.onChange(observer)
+    }
+
+    /// Registers a listener for changes to a specific key
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        listenHelper.onChangeOfKey(key, value: values[key], listener)
     }
 }
 

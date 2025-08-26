@@ -65,6 +65,8 @@ public protocol ConfigStore: _SwiftConfigsSendableAnalyticsStore {
     func fetch(completion: @escaping (Error?) -> Void)
     /// Registers a listener for configuration changes
     func onChange(_ listener: @escaping () -> Void) -> Cancellation?
+    /// Registers a listener for configuration changes
+    func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation?
     /// Retrieves the value for a given key
     func get(_ key: String) throws -> String?
     /// Writes a value for a given key
@@ -90,6 +92,21 @@ extension ConfigStore {
 	public func set<T>(_ value: T?, for key: String, as transformer: ConfigTransformer<T>) throws {
 		try set(value.flatMap(transformer.encode), for: key)
 	}
+}
+
+extension ConfigStore where Self: AnyObject {
+
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        var lastValue: String? = try? get(key)
+        return onChange { [weak self] in
+            guard let self else { return }
+            let newValue = try? self.get(key)
+            if lastValue != newValue {
+                lastValue = newValue
+                listener(newValue)
+            }
+        }
+    }
 }
 
 struct Unsupported: Error {}

@@ -66,6 +66,13 @@ public struct MultiplexConfigStore: ConfigStore {
             cancellables.forEach { $0.cancel() }
         }
     }
+    
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        let cancellables = stores.compactMap { $0.onChangeOfKey(key, listener) }
+        return cancellables.isEmpty ? nil : Cancellation {
+            cancellables.forEach { $0.cancel() }
+        }
+    }
 
     /// Returns union of keys from all stores
     public func keys() -> Set<String>? {

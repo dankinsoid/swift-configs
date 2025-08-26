@@ -32,6 +32,10 @@ public struct NOOPConfigStore: ConfigStore {
     public func onChange(_: @escaping () -> Void) -> Cancellation? {
         nil
     }
+    
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        nil
+    }
 	
 	/// Returns no keys
 	public func keys() -> Set<String>? {

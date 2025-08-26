@@ -36,7 +36,11 @@ public struct PrefixConfigStore: ConfigStore {
     }
     
     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-        return underlyingStore.onChange(listener)
+        underlyingStore.onChange(listener)
+    }
+    
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        underlyingStore.onChangeOfKey(prefixedKey(key), listener)
     }
     
     public func set(_ value: String?, for key: String) throws {

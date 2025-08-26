@@ -20,7 +20,11 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
     
     /// Environment variables don't support change notifications
     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-        return nil
+        nil
+    }
+    
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        nil
     }
     
     /// Retrieves an environment variable value

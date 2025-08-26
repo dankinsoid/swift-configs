@@ -183,3 +183,43 @@ extension ReadWriteLock {
         try withWriterLock(body)
     }
 }
+
+@propertyWrapper
+final class Locked<T> {
+    
+    private let lock = ReadWriteLock()
+    private var _value: T
+
+    init(wrappedValue: T) {
+        self._value = wrappedValue
+    }
+    
+    convenience init(_ value: T) {
+        self.init(wrappedValue: value)
+    }
+
+    var wrappedValue: T {
+        _read {
+            lock.lockRead()
+            defer { lock.unlock() }
+            yield _value
+        }
+        _modify {
+            lock.lockWrite()
+            defer { lock.unlock() }
+            yield &_value
+        }
+    }
+    
+    func withReaderLock<U>(_ body: (T) throws -> U) rethrows -> U {
+        try lock.withReaderLock {
+            try body(_value)
+        }
+    }
+    
+    func withWriterLock<U>(_ body: (inout T) throws -> U) rethrows -> U {
+        try lock.withWriterLock {
+            try body(&_value)
+        }
+    }
+}

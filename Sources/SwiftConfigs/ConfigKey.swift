@@ -157,10 +157,11 @@ public extension Configs.Keys.Key {
             }
         } onChange: { registry, observer in
             let store = store(registry)
-            let cancellation = store.onChange { [weak store] in
-                guard let store else { return }
+            let cancellation = store.onChangeOfKey(name) { value in
                 do {
-                    try observer(store.get(name, as: transformer) ?? defaultValue())
+                    if let value {
+                        try observer(transformer.decode(value))
+                    }
                 } catch {
 #if DEBUG
                     fatalError("Failed to retrieve updated config value for key '\(name)': \(error)")
