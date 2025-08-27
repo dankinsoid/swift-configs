@@ -1,45 +1,79 @@
 import Foundation
 
 /// Protocol for configuration property wrappers
+///
+/// Defines the common interface for both read-only and read-write configuration
+/// property wrappers. This protocol enables shared functionality while maintaining
+/// type safety for access permissions.
 public protocol ConfigWrapper<Value> {
 
     associatedtype Value
-    /// The configuration key permission type
+    /// The configuration key access type (ReadOnly or ReadWrite)
     associatedtype Access: KeyAccess
 
     typealias Key = Configs.Keys.Key<Value, Access>
 
-    /// The configs instance used for operations
+    /// The configuration management instance
     var configs: Configs { get }
-    /// The configuration key
+    /// The configuration key defining the value's storage and behavior
     var key: Key { get }
-    /// Initializes with a key and configs instance
+    /// Creates a wrapper with the specified key and configuration instance
     init(_ key: Key, configs: Configs)
 }
 
 public extension ConfigWrapper {
-    /// Initializes with a key path and optional configs instance
+    /// Creates a wrapper using a key path to the configuration key
+    ///
+    /// This convenience initializer allows using key paths for cleaner syntax when
+    /// declaring configuration properties.
+    ///
+    /// - Parameters:
+    ///   - key: Key path to the configuration key in the Configs.Keys namespace
+    ///   - configs: Configuration instance (uses default system if not specified)
     init(_ key: KeyPath<Configs.Keys, Key>, configs _: Configs = Configs()) {
         self.init(Configs.Keys()[keyPath: key], configs: Configs())
     }
 
-    /// Checks if the configuration value exists
+    /// Checks whether a value exists for this configuration key
+    ///
+    /// - Returns: `true` if the key has a stored value, `false` otherwise
+    /// - Note: Returns `false` if the key only has a default value but no stored value
     func exists() -> Bool {
         configs.exists(key)
     }
 }
 
 /// Property wrapper for read-only configuration values
+///
+/// Use this property wrapper for configuration values that should not be modified
+/// at runtime. The wrapped value is retrieved from the configuration system each
+/// time it's accessed, allowing for reactive updates when underlying values change.
+///
+/// ## Usage Example
+///
+/// ```swift
+/// struct Settings {
+///     @ROConfig(\.apiBaseURL)
+///     var baseURL: String
+///     
+///     @ROConfig(\.maxRetryAttempts)  
+///     var retries: Int
+/// }
+/// ```
 @propertyWrapper
 public struct ROConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 
-    /// The configuration value
+    /// The current configuration value
+    ///
+    /// This value is fetched from the configuration system on each access,
+    /// ensuring it reflects the most current stored or default value.
     public var wrappedValue: Value {
         configs.get(key)
     }
 
+    /// Provides access to the wrapper itself for advanced operations
     public var projectedValue: Self {
         self
     }
@@ -51,12 +85,35 @@ public struct ROConfig<Value>: ConfigWrapper {
 }
 
 /// Property wrapper for read-write configuration values
+///
+/// Use this property wrapper for configuration values that can be modified at runtime.
+/// Changes are immediately persisted to the underlying configuration store and will
+/// trigger change notifications for observers.
+///
+/// ## Usage Example
+///
+/// ```swift
+/// struct UserSettings {
+///     @RWConfig(\.themeName)
+///     var theme: String
+///     
+///     @RWConfig(\.notificationsEnabled)
+///     var notifications: Bool
+///     
+///     func resetTheme() {
+///         $theme.delete() // Removes stored value, falls back to default
+///     }
+/// }
+/// ```
 @propertyWrapper
 public struct RWConfig<Value>: ConfigWrapper {
     public let configs: Configs
     public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
-    /// The configuration value with getter and setter
+    /// The configuration value with read and write access
+    ///
+    /// Reading fetches the current value from the configuration system.
+    /// Writing immediately persists the value to the configured store.
     public var wrappedValue: Value {
         get {
             configs.get(key)
@@ -66,6 +123,7 @@ public struct RWConfig<Value>: ConfigWrapper {
         }
     }
 
+    /// Provides access to the wrapper itself for advanced operations
     public var projectedValue: Self {
         self
     }
@@ -75,7 +133,10 @@ public struct RWConfig<Value>: ConfigWrapper {
         self.configs = configs
     }
 
-    /// Removes the configuration value
+    /// Removes the stored value, falling back to the key's default
+    ///
+    /// After deletion, accessing the wrapped value will return the key's default value.
+    /// This operation is persisted to the underlying store and triggers change notifications.
     public func delete() {
         configs.delete(key)
     }

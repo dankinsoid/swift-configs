@@ -6,19 +6,66 @@ import Foundation
 	#endif
 
 	/// Configuration store backed by iOS/macOS Keychain for secure storage
+	///
+	/// This store provides secure storage for sensitive configuration data using the system's
+	/// Keychain services. It supports various security levels from basic encrypted storage
+	/// to hardware-backed Secure Enclave protection with biometric authentication.
+	///
+	/// ## Security Features
+	///
+	/// - **Encrypted Storage**: All values are encrypted and protected by the system
+	/// - **Secure Enclave**: Hardware-backed security for maximum protection (iOS/macOS with T-series chips)
+	/// - **Biometric Protection**: Touch ID/Face ID authentication for key access
+	/// - **iCloud Sync**: Optional synchronization across user's devices (incompatible with Secure Enclave)
+	/// - **Access Controls**: Fine-grained control over when items can be accessed
+	///
+	/// ## Performance Considerations
+	///
+	/// - **Slower than UserDefaults**: Keychain operations involve cryptographic operations
+	/// - **Background Limitations**: Some accessibility levels restrict background access
+	/// - **User Interaction**: Biometric authentication may require user presence
+	/// - **Device Dependencies**: Secure Enclave items are tied to specific hardware
+	///
+	/// ## Usage Examples
+	///
+	/// ```swift
+	/// // Basic secure storage
+	/// ConfigSystem.bootstrap([.secure: .keychain])
+	///
+	/// // Secure Enclave with biometric protection
+	/// ConfigSystem.bootstrap([.critical: .biometricSecureEnclave()])
+	///
+	/// // iCloud Keychain sync (not compatible with Secure Enclave)
+	/// ConfigSystem.bootstrap([.secure: .keychain(iCloudSync: true)])
+	/// ```
 	public final class KeychainConfigStore: ConfigStore {
 
-		/// Optional service identifier for keychain items
+		/// Service identifier for grouping related keychain items
+		///
+		/// Items with the same service are grouped together in keychain queries.
+		/// Use different services to separate unrelated configuration domains.
 		public let service: String?
-		/// Security class for keychain items
+		
+		/// Keychain security class determining the type of item stored
 		public let secClass: SecClass
-		/// Whether to sync keychain items with iCloud
+		
+		/// Whether items sync across devices via iCloud Keychain
+		///
+		/// - Warning: Cannot be used with Secure Enclave (device-specific by nature)
 		public let iCloudSync: Bool
-		/// Accessibility level for keychain items
+		
+		/// Accessibility level controlling when items can be accessed
 		public let attrAccessible: SecAttrAccessible
-		/// Whether to use Secure Enclave for enhanced security
+		
+		/// Whether to use hardware-backed Secure Enclave protection
+		///
+		/// - Note: Requires devices with T-series chips or newer (iPhone 5s+, iPad Air+, Mac with T1+)
+		/// - Warning: Items are device-specific and cannot sync via iCloud
 		public let useSecureEnclave: Bool
-		/// Access control options when using Secure Enclave
+		
+		/// Access control requirements for Secure Enclave protected items
+		///
+		/// Specifies authentication requirements (biometrics, passcode, etc.) for accessing protected keys.
 		public let secureEnclaveAccessControl: SecureEnclaveAccessControl?
     
         // Observers for keychain changes
@@ -27,14 +74,16 @@ import Foundation
 		/// Shared default keychain configuration store
 		public static var `default` = KeychainConfigStore()
 
-		/// Creates a keychain configs store
+		/// Creates a keychain configuration store with specified security options
+		///
 		/// - Parameters:
-		///   - service: Optional service identifier for keychain items
-		///   - secClass: Security class for keychain items
-		///   - iCloudSync: Whether to enable iCloud Keychain synchronization
-		///   - useSecureEnclave: Whether to use Secure Enclave for key storage
-		///   - secureEnclaveAccessControl: Secure Enclave access control options
-		/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
+		///   - service: Service identifier for grouping related items (nil for default)
+		///   - secClass: Keychain security class (default: generic password)
+		///   - attrAccessible: When the keychain item can be accessed (default: after first unlock)
+		///   - iCloudSync: Whether to sync items across devices via iCloud Keychain
+		///   - useSecureEnclave: Whether to use hardware-backed Secure Enclave protection
+		///   - secureEnclaveAccessControl: Authentication requirements for Secure Enclave items
+		/// - Warning: iCloud sync and Secure Enclave are mutually exclusive - Secure Enclave items cannot sync across devices
 		public init(
 			service: String? = nil,
 			class secClass: SecClass = .genericPassword,
@@ -56,28 +105,33 @@ import Foundation
 			self.secureEnclaveAccessControl = secureEnclaveAccessControl
 		}
 
-		/// Retrieves a value from the keychain
 		public func get(_ key: String) throws -> String? {
 			let (_, item, status) = loadStatus(for: key)
 			return try load(item: item, status: status)
 		}
 
-		/// Waits for protected data to become available
+		/// Ensures keychain is available and protected data can be accessed
+		///
+		/// On iOS, waits for device unlock if necessary. On macOS, completes immediately.
+		///
+		/// - Parameter completion: Called when keychain access is available or timeout occurs
+		/// - Note: May require user interaction (device unlock) on iOS
 		public func fetch(completion: @escaping ((any Error)?) -> Void) {
 			waitForProtectedDataAvailable(completion: completion)
 		}
 
-		/// Registers a listener for keychain changes
 		public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
             listenHelper.onChange(listener)
 		}
         
-        /// Registers a listener for changes to a specific key
         public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
             listenHelper.onChangeOfKey(key, value: try? get(key), listener)
         }
 
-		/// Returns all keychain keys for this store
+		/// Returns all configuration keys stored in the keychain
+		///
+		/// - Returns: Set of all keys, or `nil` if enumeration fails due to keychain errors
+		/// - Note: May require device unlock or biometric authentication depending on access controls
 		public func keys() -> Set<String>? {
 			var query: [String: Any] = [
 				kSecReturnAttributes as String: kCFBooleanTrue!,
@@ -108,10 +162,8 @@ import Foundation
 			return keys
 		}
 		
-		/// Keychain store supports writing operations
 		public var isWritable: Bool { true }
 
-		/// Writes a value to the keychain
 		public func set(_ value: String?, for key: String) throws {
 			// Create a query for saving the value
 			var query: [String: Any] = [
@@ -152,7 +204,11 @@ import Foundation
             }
         }
 
-		/// Clears all keychain items for this store
+		/// Removes all configuration items from the keychain
+		///
+		/// - Throws: KeychainError if the operation fails
+		/// - Warning: This permanently deletes all stored configuration data and cannot be undone
+		/// - Note: May require user authentication depending on access controls
 		public func removeAll() throws {
 			var query: [String: Any] = [:]
 			configureAccess(query: &query)
@@ -171,11 +227,13 @@ import Foundation
             listenHelper.notifyChange(values: { _ in nil })
 		}
 		
-		/// Keychain accessibility levels
+		/// Keychain accessibility levels controlling when items can be accessed
+		///
+		/// These values determine when your configuration values are accessible relative to
+		/// device lock state and synchronization capabilities.
 		public struct SecAttrAccessible: RawRepresentable, CaseIterable {
 			public let rawValue: CFString
 
-			/// All available accessibility cases
 			public static var allCases: [SecAttrAccessible] {
 				[.whenUnlocked, .afterFirstUnlock, .always, .whenUnlockedThisDeviceOnly]
 			}
@@ -184,21 +242,36 @@ import Foundation
 				self.rawValue = rawValue
 			}
 
-			/// The value that indicates the item is accessible only when the device is unlocked.
+			/// Item is accessible only when the device is unlocked
+			///
+			/// Most secure option for normal use. Requires the device to be actively unlocked.
+			/// - Note: May cause issues for background app operations
 			public static let whenUnlocked = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlocked)
-			/// The value that indicates the item is accessible after the first unlock.
+			
+			/// Item is accessible after the first device unlock (default)
+			///
+			/// Recommended for most configuration data. Accessible once the device has been
+			/// unlocked at least once since boot, even when subsequently locked.
 			public static let afterFirstUnlock = SecAttrAccessible(rawValue: kSecAttrAccessibleAfterFirstUnlock)
-			/// The value that indicates the item is always accessible.
+			
+			/// Item is always accessible regardless of device lock state
+			///
+			/// - Warning: Least secure option. Use only for non-sensitive configuration data
 			public static let always = SecAttrAccessible(rawValue: kSecAttrAccessibleAlways)
-			/// The value that indicates the item is accessible only when the device is unlocked and this item is not synced with iCloud.
+			
+			/// Item is accessible only when unlocked and never syncs to iCloud
+			///
+			/// Like `whenUnlocked` but explicitly prevents iCloud synchronization.
 			public static let whenUnlockedThisDeviceOnly = SecAttrAccessible(rawValue: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
 		}
 
-		/// Access control options for Secure Enclave operations
+		/// Access control requirements for Secure Enclave protected items
+		///
+		/// These options specify authentication requirements when accessing keys stored in the Secure Enclave.
+		/// Multiple options can be combined for layered security.
 		public struct SecureEnclaveAccessControl: RawRepresentable, CaseIterable {
 			public let rawValue: SecAccessControlCreateFlags
 
-			/// All available access control cases
 			public static var allCases: [SecureEnclaveAccessControl] {
 				var cases: [SecureEnclaveAccessControl] = [.userPresence, .devicePasscode, .privateKeyUsage]
 				#if os(iOS)
@@ -215,33 +288,59 @@ import Foundation
 				self.rawValue = rawValue
 			}
 
-			/// Requires user presence (Touch ID, Face ID, or device passcode)
+			/// Requires user presence via biometrics or device passcode
+			///
+			/// The most common requirement - accepts Touch ID, Face ID, or device passcode.
+			/// Recommended for most Secure Enclave use cases.
 			public static let userPresence = SecureEnclaveAccessControl(rawValue: .userPresence)
-			/// Requires device passcode
+			
+			/// Requires device passcode entry (no biometrics accepted)
+			///
+			/// Forces passcode entry even if biometrics are available. Use when requiring
+			/// the highest level of deliberate user action.
 			public static let devicePasscode = SecureEnclaveAccessControl(rawValue: .devicePasscode)
-			/// Allows private key usage
+			
+			/// Allows cryptographic operations with private keys
+			///
+			/// Required for key generation and signing operations in the Secure Enclave.
 			public static let privateKeyUsage = SecureEnclaveAccessControl(rawValue: .privateKeyUsage)
 			
 			#if os(iOS)
-			/// Requires any biometric authentication
+			/// Requires biometric authentication (Touch ID or Face ID)
+			///
+			/// Accepts any enrolled biometric, even if additional biometrics are enrolled later.
+			/// Falls back to passcode if biometrics are unavailable.
 			public static let biometryAny = SecureEnclaveAccessControl(rawValue: .biometryAny)
-			/// Requires current biometric set
+			
+			/// Requires biometric authentication from the current biometric set
+			///
+			/// Invalidated when new biometrics are enrolled. More secure than `biometryAny`
+			/// as it ensures only the originally enrolled biometrics can access the data.
 			public static let biometryCurrentSet = SecureEnclaveAccessControl(rawValue: .biometryCurrentSet)
 			#elseif os(macOS)
 			@available(macOS 10.13.4, *)
-			/// Requires any biometric authentication
+			/// Requires biometric authentication (Touch ID)
+			///
+			/// Accepts any enrolled biometric, even if additional biometrics are enrolled later.
+			/// Falls back to passcode if biometrics are unavailable.
 			public static let biometryAny = SecureEnclaveAccessControl(rawValue: .biometryAny)
+			
 			@available(macOS 10.13.4, *)
-			/// Requires current biometric set
+			/// Requires biometric authentication from the current biometric set
+			///
+			/// Invalidated when new biometrics are enrolled. More secure than `biometryAny`
+			/// as it ensures only the originally enrolled biometrics can access the data.
 			public static let biometryCurrentSet = SecureEnclaveAccessControl(rawValue: .biometryCurrentSet)
 			#endif
 		}
 
-		/// Keychain security class types
+		/// Keychain security class types determining how items are stored and accessed
+		///
+		/// Each security class has different attributes and behaviors in the keychain.
+		/// Most configuration stores should use `genericPassword`.
 		public struct SecClass: RawRepresentable, CaseIterable {
 			public let rawValue: CFString
 
-			/// All available security classes
 			public static var allCases: [SecClass] {
 				[.genericPassword, .internetPassword, .certificate, .key, .identity]
 			}
@@ -250,15 +349,32 @@ import Foundation
 				self.rawValue = rawValue
 			}
 
-			/// The value that indicates a generic password item.
+			/// Generic password items (recommended for configuration data)
+			///
+			/// The most common and flexible keychain item type. Suitable for storing
+			/// configuration values, tokens, and other password-like data.
 			public static let genericPassword = SecClass(rawValue: kSecClassGenericPassword)
-			/// The value that indicates an Internet password item.
+			
+			/// Internet password items for web credentials
+			///
+			/// Specifically designed for storing credentials associated with internet services.
+			/// Includes additional attributes like server, protocol, and path.
 			public static let internetPassword = SecClass(rawValue: kSecClassInternetPassword)
-			/// The value that indicates a certificate item.
+			
+			/// Digital certificates
+			///
+			/// For storing X.509 certificates and other certificate data.
 			public static let certificate = SecClass(rawValue: kSecClassCertificate)
-			/// The value that indicates a cryptographic key item.
+			
+			/// Cryptographic keys
+			///
+			/// For storing public/private key pairs and symmetric keys.
+			/// Used with Secure Enclave for hardware-backed key storage.
 			public static let key = SecClass(rawValue: kSecClassKey)
-			/// The value that indicates an identity item.
+			
+			/// Identity items (certificate + private key pairs)
+			///
+			/// Combines a certificate with its associated private key.
 			public static let identity = SecClass(rawValue: kSecClassIdentity)
 		}
 
@@ -410,19 +526,22 @@ import Foundation
 
 extension ConfigStore where Self == KeychainConfigStore {
 
-	/// Creates a default Keychain configs store
+	/// Default keychain configuration store
 	public static var keychain: KeychainConfigStore {
 		KeychainConfigStore.default
 	}
 	
-	/// Creates a Keychain configs store with the specified service identifier
+	/// Creates a customized keychain configuration store
+	///
 	/// - Parameters:
-	///  - service: Optional service identifier for keychain items
-	///  - secClass: Security class for keychain items
-	///  - iCloudSync: Whether to enable iCloud Keychain synchronization
-	///  - useSecureEnclave: Whether to use Secure Enclave for key storage
-	///  - secureEnclaveAccessControl: Secure Enclave access control options
-	/// - Warning: iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.
+	///   - service: Service identifier for grouping related items (nil for default)
+	///   - secClass: Keychain security class (default: generic password)
+	///   - attrAccessible: When the keychain item can be accessed (default: after first unlock)
+	///   - iCloudSync: Whether to sync items across devices via iCloud Keychain
+	///   - useSecureEnclave: Whether to use hardware-backed Secure Enclave protection
+	///   - secureEnclaveAccessControl: Authentication requirements for Secure Enclave items
+	/// - Returns: A keychain store configured with the specified options
+	/// - Warning: iCloud sync and Secure Enclave are mutually exclusive
 	public static func keychain(
 		service: String? = nil,
 		class secClass: KeychainConfigStore.SecClass = .genericPassword,
@@ -441,11 +560,13 @@ extension ConfigStore where Self == KeychainConfigStore {
 		)
 	}
 	
-	/// Creates a Secure Enclave Keychain configs store with user presence requirement
+	/// Creates a Secure Enclave keychain store with customizable authentication
+	///
 	/// - Parameters:
-	///  - service: Optional service identifier for keychain items
-	///  - accessControl: Secure Enclave access control options (defaults to user presence)
-	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	///   - service: Service identifier for grouping related items (nil for default)
+	///   - accessControl: Authentication requirements (default: user presence via biometrics or passcode)
+	/// - Returns: A keychain store using hardware-backed Secure Enclave protection
+	/// - Note: Secure Enclave items are device-specific and cannot sync via iCloud
 	public static func secureEnclave(
 		service: String? = nil,
 		accessControl: KeychainConfigStore.SecureEnclaveAccessControl = .userPresence
@@ -457,10 +578,11 @@ extension ConfigStore where Self == KeychainConfigStore {
 		)
 	}
 	
-	/// Creates a Secure Enclave Keychain configs store with biometric authentication
-	/// - Parameters:
-	///  - service: Optional service identifier for keychain items
-	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	/// Creates a Secure Enclave keychain store requiring biometric authentication
+	///
+	/// - Parameter service: Service identifier for grouping related items (nil for default)
+	/// - Returns: A keychain store requiring Touch ID or Face ID for access
+	/// - Note: Falls back to passcode if biometrics are unavailable. Items are device-specific and cannot sync via iCloud.
 	#if os(iOS)
 	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigStore {
 		KeychainConfigStore(
@@ -471,8 +593,11 @@ extension ConfigStore where Self == KeychainConfigStore {
 	}
 	#elseif os(macOS)
 	@available(macOS 10.13.4, *)
-	/// Creates a Secure Enclave Keychain configs store with biometric authentication
-	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	/// Creates a Secure Enclave keychain store requiring biometric authentication
+	///
+	/// - Parameter service: Service identifier for grouping related items (nil for default)
+	/// - Returns: A keychain store requiring Touch ID for access
+	/// - Note: Falls back to passcode if biometrics are unavailable. Items are device-specific and cannot sync via iCloud.
 	public static func biometricSecureEnclave(service: String? = nil) -> KeychainConfigStore {
 		KeychainConfigStore(
 			service: service,
@@ -482,10 +607,11 @@ extension ConfigStore where Self == KeychainConfigStore {
 	}
 	#endif
 	
-	/// Creates a Secure Enclave Keychain configs store with device passcode requirement
-	/// - Parameters:
-	///  - service: Optional service identifier for keychain items
-	/// - Note: Secure Enclave items are device-specific and cannot be synced with iCloud.
+	/// Creates a Secure Enclave keychain store requiring device passcode
+	///
+	/// - Parameter service: Service identifier for grouping related items (nil for default)
+	/// - Returns: A keychain store requiring device passcode entry (no biometrics accepted)
+	/// - Note: Ensures the highest level of deliberate user authentication. Items are device-specific and cannot sync via iCloud.
 	public static func passcodeSecureEnclave(service: String? = nil) -> KeychainConfigStore {
 		KeychainConfigStore(
 			service: service,

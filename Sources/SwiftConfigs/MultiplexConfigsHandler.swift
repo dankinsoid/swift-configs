@@ -1,20 +1,55 @@
 import Foundation
 
-/// Configuration store that multiplexes operations across multiple stores
+/// Configuration store that coordinates operations across multiple stores
+///
+/// This store implements a layered configuration system where values are read from the first
+/// store that contains them, but writes are applied to all stores. This enables patterns like:
+///
+/// - **Fallback Chains**: Check remote configs first, then local defaults
+/// - **Write-Through Caching**: Write to both cache and persistent storage
+/// - **Multi-Source Configuration**: Combine environment variables, UserDefaults, and remote configs
+///
+/// ## Read Behavior
+///
+/// Values are read from stores in order until one returns a non-nil value.
+/// If all stores return nil, the multiplex store returns nil.
+///
+/// ## Write Behavior  
+///
+/// Write operations are sent to all stores. If any store fails, the error is collected
+/// and all errors are either returned individually or wrapped in a `Errors` object.
+///
+/// ## Example
+///
+/// ```swift
+/// let multiplexStore = MultiplexConfigStore(
+///     .environment,           // Check environment variables first
+///     .userDefaults,         // Then UserDefaults
+///     .inMemory(["key": "fallback"])  // Finally in-memory defaults
+/// )
+/// 
+/// ConfigSystem.bootstrap([.default: multiplexStore])
+/// ```
 public struct MultiplexConfigStore: ConfigStore {
     private let stores: [ConfigStore]
 
     /// Creates a multiplex store with an array of stores
+    ///
+    /// - Parameter stores: The stores to multiplex, in priority order for reads
+    /// - Note: Stores are queried in order for reads, but all receive writes
     public init(stores: [ConfigStore]) {
         self.stores = stores
     }
 
     /// Creates a multiplex store with variadic stores
+    ///
+    /// - Parameter stores: The stores to multiplex, in priority order for reads
+    /// - Note: Stores are queried in order for reads, but all receive writes
     public init(_ stores: ConfigStore...) {
         self.init(stores: stores)
     }
 
-    /// Retrieves value from the first store that has it
+    /// Retrieves value from the first store that contains the key
     public func get(_ key: String) throws -> String? {
         var errors: [Error] = []
         for store in stores {
@@ -32,7 +67,10 @@ public struct MultiplexConfigStore: ConfigStore {
         return nil
     }
 
-    /// Fetches from all stores and completes when all are done
+    /// Fetches from all stores concurrently and completes when all finish
+    ///
+    /// - Parameter completion: Called when all stores complete, with collected errors if any
+    /// - Note: Fetches from all stores in parallel for best performance
     public func fetch(completion: @escaping (Error?) -> Void) {
         let multiplexCompletion = MultiplexCompletion(count: stores.count, completion: completion)
         for store in stores {
@@ -59,7 +97,11 @@ public struct MultiplexConfigStore: ConfigStore {
         return false
     }
     
-    /// Registers listeners on all stores
+    /// Registers change listeners on all stores that support them
+    ///
+    /// - Parameter listener: Called when any store reports a configuration change
+    /// - Returns: Cancellation token that stops all listeners, or `nil` if no stores support listening
+    /// - Note: The listener may be called multiple times for a single logical change
     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
         let cancellables = stores.compactMap { $0.onChange(listener) }
         return cancellables.isEmpty ? nil : Cancellation {
@@ -74,7 +116,10 @@ public struct MultiplexConfigStore: ConfigStore {
         }
     }
 
-    /// Returns union of keys from all stores
+    /// Returns the union of all keys from all stores
+    ///
+    /// - Returns: Combined set of all keys across stores, or `nil` if no store supports key enumeration
+    /// - Note: Some stores may not support key enumeration, which doesn't affect the result
     public func keys() -> Set<String>? {
         stores.reduce(into: Set<String>?.none) { result, store in
             if let keys = store.keys() {
@@ -86,12 +131,16 @@ public struct MultiplexConfigStore: ConfigStore {
         }
     }
 	
-	/// Supports writing if any store supports it
 	public var isWritable: Bool {
 		stores.contains(where: \.isWritable)
 	}
 
-    /// Writes to all stores, collecting any errors
+    /// Writes to all stores, collecting and throwing any errors
+    ///
+    /// - Parameters:
+    ///   - value: The value to store, or `nil` to remove
+    ///   - key: The configuration key
+    /// - Throws: Individual error if only one store fails, or `Errors` if multiple stores fail
     public func set(_ value: String?, for key: String) throws {
         var errors: [Error] = []
         for store in stores {
@@ -106,7 +155,10 @@ public struct MultiplexConfigStore: ConfigStore {
         }
     }
 
-    /// Clears all stores, collecting any errors
+    /// Removes all values from all stores
+    ///
+    /// - Throws: Individual error if only one store fails, or `Errors` if multiple stores fail
+    /// - Warning: This operation cannot be undone and affects all underlying stores
     public func removeAll() throws {
         var errors: [Error] = []
         for store in stores {
@@ -121,9 +173,15 @@ public struct MultiplexConfigStore: ConfigStore {
         }
     }
 
-    /// Error type that wraps multiple errors from stores
+    /// Error type that wraps multiple errors from different stores
+    ///
+    /// This error is thrown when operations affect multiple stores and more than one fails.
+    /// Individual store errors are preserved in the `errors` array.
     public struct Errors: Error {
         /// The collection of errors from different stores
+        ///
+        /// Each error corresponds to a failure in one of the underlying stores.
+        /// The order matches the order of stores in the multiplex configuration.
         public let errors: [Error?]
     }
 }
@@ -160,12 +218,18 @@ final class MultiplexCompletion {
 }
 
 public extension ConfigStore where Self == MultiplexConfigStore {
-    /// Creates a multiplex configuration store with an array of stores
+    /// Creates a multiplex configuration store from an array of stores
+    ///
+    /// - Parameter stores: The stores to multiplex, in priority order for reads
+    /// - Returns: A multiplex store that coordinates operations across all stores
     static func multiple(_ stores: [ConfigStore]) -> MultiplexConfigStore {
         MultiplexConfigStore(stores: stores)
     }
 
-    /// Creates a multiplex configuration store with variadic stores
+    /// Creates a multiplex configuration store from variadic stores
+    ///
+    /// - Parameter stores: The stores to multiplex, in priority order for reads
+    /// - Returns: A multiplex store that coordinates operations across all stores
     static func multiple(_ stores: ConfigStore...) -> MultiplexConfigStore {
         MultiplexConfigStore(stores: stores)
     }

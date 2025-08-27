@@ -1,24 +1,44 @@
 import Foundation
 
-/// Configuration store that reads from environment variables
+/// Configuration store that reads values from environment variables
+///
+/// This store provides read-only access to environment variables set in the process.
+/// It's commonly used for application configuration that varies by deployment environment.
+///
+/// ## Usage Example
+///
+/// ```swift
+/// // Using with specific environment variables
+/// extension Configs.Keys {
+///     static let apiBaseURL = RWKey("API_BASE_URL", in: .environment, default: "https://api.example.com")
+///     static let debugEnabled = RWKey("DEBUG_ENABLED", in: .environment, default: false)
+/// }
+/// ```
+///
+/// ## Characteristics
+///
+/// - **Read-Only**: Environment variables cannot be modified at runtime
+/// - **No Change Notifications**: Environment variables are static during process lifetime  
+/// - **Platform Agnostic**: Works on all platforms that support environment variables
+/// - **Case Sensitive**: Environment variable names are case-sensitive on most platforms
 public struct EnvironmentVariableConfigStore: ConfigStore {
 
     private let processInfo: ProcessInfo
 
     /// Creates an environment variable configuration store
-    /// - Parameter processInfo: The ProcessInfo instance to use (defaults to ProcessInfo.processInfo)
+    ///
+    /// - Parameter processInfo: The ProcessInfo instance to use for reading environment variables
+    /// - Note: Use the default parameter unless you need to inject a different ProcessInfo for testing
     public init(processInfo: ProcessInfo = ProcessInfo.processInfo) {
         self.processInfo = processInfo
     }
     
     // MARK: - ConfigStore Implementation
     
-    /// Environment variables are always available, no fetching required
     public func fetch(completion: @escaping (Error?) -> Void) {
         completion(nil)
     }
     
-    /// Environment variables don't support change notifications
     public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
         nil
     }
@@ -27,7 +47,6 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
         nil
     }
     
-    /// Retrieves an environment variable value
     public func get(_ key: String) -> String? {
         processInfo.environment[key]
     }
@@ -36,22 +55,18 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
         processInfo.environment[key] != nil
     }
 	
-	/// Environment variables are read-only
 	public var isWritable: Bool {
 		false
 	}
     
-    /// Writing to environment variables is not supported
     public func set(_ value: String?, for key: String) throws {
         throw Unsupported()
     }
     
-    /// Clearing environment variables is not supported
     public func removeAll() throws {
         throw Unsupported()
     }
     
-    /// Returns all environment variable keys
     public func keys() -> Set<String>? {
         Set(processInfo.environment.keys)
     }
@@ -59,7 +74,7 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
 
 extension ConfigStore where Self == EnvironmentVariableConfigStore {
 
-	/// Creates an environment variable configuration store
+	/// Shared environment variable configuration store
 	public static var environment: EnvironmentVariableConfigStore {
 		EnvironmentVariableConfigStore()
 	}

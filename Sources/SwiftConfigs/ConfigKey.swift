@@ -1,6 +1,8 @@
 import Foundation
 
-/// Protocol that defines permission types for configuration keys
+/// Defines permission types for configuration keys
+///
+/// Used to enforce read-only or read-write access at compile time.
 public protocol KeyAccess {
     /// Whether this permission type supports writing operations
     static var isWritable: Bool { get }
@@ -15,19 +17,25 @@ public extension Configs {
     
         public init() {}
 
-        /// Read-only permission type for configuration keys
+        /// Read-only permission for configuration keys
+        ///
+        /// Keys with this permission cannot be modified through the configuration system.
         public enum ReadOnly: KeyAccess {
-            /// Read-only keys do not support writing
             public static var isWritable: Bool { false }
         }
 
-        /// Read-write permission type for configuration keys
+        /// Read-write permission for configuration keys  
+        ///
+        /// Keys with this permission support both reading and writing operations.
         public enum ReadWrite: KeyAccess {
-            /// Read-write keys support writing operations
             public static var isWritable: Bool { true }
         }
 
-        /// A concrete implementation of ConfigKey with specified value type and permission
+        /// Configuration key with specified value type and access permissions
+        ///
+        /// Encapsulates all operations for a configuration value, including reading, writing,
+        /// existence checking, and change observation. The `Access` type parameter enforces
+        /// read-only or read-write permissions at compile time.
         public struct Key<Value, Access: KeyAccess> {
 
             public let name: String
@@ -37,7 +45,17 @@ public extension Configs {
             private let _exists: (StoreRegistry) -> Bool
             private let _listen: (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
 
-            /// Creates a new configuration key with custom behavior
+            /// Creates a configuration key with custom behavior
+            ///
+            /// - Parameters:
+            ///   - key: The unique identifier for this configuration key
+            ///   - get: Closure to retrieve the current value
+            ///   - set: Closure to store a new value
+            ///   - delete: Closure to remove the stored value
+            ///   - exists: Closure to check if a value exists
+            ///   - onChange: Closure to observe value changes
+            ///
+            /// - Note: Most users should use the convenience initializers instead of this low-level constructor.
             public init(
                 _ key: String,
                 get: @escaping (StoreRegistry) -> Value,
@@ -62,6 +80,9 @@ public extension Configs {
                 _set(registry, newValue)
             }
 
+            /// Removes the stored value for this key
+            ///
+            /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
             public func delete(registry: StoreRegistry) {
                 try? _remove(registry)
             }
@@ -74,6 +95,13 @@ public extension Configs {
                 _listen(registry, observer)
             }
             
+            /// Transforms this key to work with a different value type
+            ///
+            /// - Parameters:
+            ///   - transform: Function to convert from this key's value type to the target type
+            ///   - reverseTransform: Function to convert from the target type back to this key's value type
+            /// - Returns: A new key that operates on the transformed value type
+            /// - Note: Both transform functions must be pure and reversible for consistent behavior.
             public func map<T>(
                 _ transform: @escaping (Value) -> T,
                 _ reverseTransform: @escaping (T) -> Value
@@ -163,6 +191,13 @@ public extension Configs.Keys.Key {
     }
 
     /// Creates a configuration key with a specific store and transformer
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - transformer: How to encode/decode values for storage
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
     init(
         _ key: String,
         store: ConfigStore,
@@ -180,6 +215,13 @@ public extension Configs.Keys.Key {
     }
 
     /// Creates a configuration key for a specific category with a transformer
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - transformer: How to encode/decode values for storage
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -196,13 +238,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Creates a configuration key for LosslessStringConvertible values
+    /// Creates a configuration key for values that can be converted to/from strings
     ///
     /// - Parameters:
-    ///   - key: The key string
-    ///   - store: The configuration store
-    ///   - defaultValue: The default value to use if the key is not found
-    ///   - cacheDefaultValue: Whether to cache the default value when first accessed
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Uses the built-in string conversion transformer for encoding/decoding.
     init(
         _ key: String,
         store: ConfigStore,
@@ -218,7 +261,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Creates an optional configuration key for LosslessStringConvertible values
+    /// Creates an optional configuration key for string-convertible values
+    /// 
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use  
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
     init<T>(
         _ key: String,
         store: ConfigStore,
@@ -234,7 +284,13 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Creates a configuration key in a category for LosslessStringConvertible values
+    /// Creates a configuration key in a category for string-convertible values
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -250,7 +306,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Creates an optional configuration key in a category for LosslessStringConvertible values
+    /// Creates an optional configuration key in a category for string-convertible values
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
     init<T>(
         _ key: String,
         in category: ConfigCategory,
@@ -266,7 +329,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Creates a configuration key for RawRepresentable values
+    /// Creates a configuration key for enum and raw representable values
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Stores the raw value and converts back to the enum type on retrieval.
     init(
         _ key: String,
         store: ConfigStore,
@@ -282,11 +352,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates a configuration key in a category for enum and raw representable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Stores the raw value and converts back to the enum type on retrieval.
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -302,11 +375,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates an optional configuration key in a category for enum and raw representable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
     init<T>(
         _ key: String,
         in category: ConfigCategory,
@@ -322,11 +398,14 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates an optional configuration key for enum and raw representable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
     init<T>(
         _ key: String,
         store: ConfigStore,
@@ -342,6 +421,16 @@ public extension Configs.Keys.Key {
         )
     }
 
+    /// Creates a configuration key for JSON-encoded Codable values
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init(
         _ key: String,
@@ -360,12 +449,16 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates a configuration key in a category for JSON-encoded Codable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
-    ///   - decoder: The JSON decoder to use for decoding the value.
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init(
         _ key: String,
@@ -384,12 +477,17 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates an optional configuration key in a category for JSON-encoded Codable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
-    ///   - decoder: The JSON decoder to use for decoding the value.
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
+    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init<T>(
         _ key: String,
@@ -408,12 +506,17 @@ public extension Configs.Keys.Key {
         )
     }
 
-    /// Returns the key instance.
+    /// Creates an optional configuration key for JSON-encoded Codable values
     ///
     /// - Parameters:
-    ///   - key: The key string.
-    ///   - default: The default value to use if the key is not found.
-    ///   - decoder: The JSON decoder to use for decoding the value.
+    ///   - key: The configuration key name
+    ///   - store: The configuration store to use
+    ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
+    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init<T>(
         _ key: String,
