@@ -45,7 +45,7 @@ import Foundation
 		) {
 			// Validate that iCloud sync and Secure Enclave are not used together
 			if iCloudSync && useSecureEnclave {
-				fatalError("iCloud sync and Secure Enclave cannot be used together. Secure Enclave items are device-specific and cannot be synced across devices.")
+                ConfigSystem.fail(.iCloudSyncAndSecureEnclaveAreIncompatible)
 			}
 			
 			self.service = service

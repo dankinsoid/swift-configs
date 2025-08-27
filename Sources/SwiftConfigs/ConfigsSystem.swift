@@ -28,19 +28,9 @@ public enum ConfigSystem {
 	]
 
     static let registry = StoreRegistry(isPreview ? mockStores : defaultStores)
-#if DEBUG
-    @Locked private static var isBootstrapped = false
-#endif
 
-	/// Bootstraps the configuration system with a single store
-	/// 
-	/// This function can only be called once per program execution.
-	/// Multiple calls will lead to undefined behavior.
-	///
-	/// - Parameter store: The configuration store to use
-	public static func bootstrap(_ store: ConfigStore, file: StaticString = #fileID, line: UInt = #line) {
-        bootstrap([.default: store], file: file, line: line)
-	}
+    @Locked private static var errorHandler: (ConfigFail) -> Void = defaultErrorHandler
+    @Locked private static var isBootstrapped = false
 
 	/// Bootstraps the configuration system with category-specific stores
 	/// 
@@ -48,13 +38,22 @@ public enum ConfigSystem {
 	/// Multiple calls will lead to undefined behavior.
 	///
 	/// - Parameter stores: A dictionary mapping categories to their stores
-    public static func bootstrap(_ stores: [ConfigCategory: ConfigStore], file: StaticString = #fileID, line: UInt = #line) {
+    public static func bootstrap(
+        _ stores: [ConfigCategory: ConfigStore],
+        errorHandler: @escaping (ConfigFail) -> Void = defaultErrorHandler,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) {
         registry.stores = stores
-#if DEBUG
-        assert(!isBootstrapped, "ConfigSystem.bootstrap() can only be called once per program execution.", file: file, line: line)
-        isBootstrapped = true
-        assert(!registry.didAccessStores, "ConfigSystem.bootstrap() must be called before accessing any configs.", file: file, line: line)
-#endif
+        self.errorHandler = errorHandler
+        if isBootstrapped {
+            ConfigSystem.fail(.bootstrapCanBeCalledOnlyOnce)
+        } else {
+            isBootstrapped = true
+        }
+        if registry.didAccessStores {
+            ConfigSystem.fail(.bootstrapMustBeCalledBeforeUsingConfigs)
+        }
 	}
 
 	/// Bootstraps with default stores, overriding with provided stores
@@ -64,9 +63,30 @@ public enum ConfigSystem {
 	/// Can only be called once per program execution.
 	///
 	/// - Parameter stores: Custom stores to override defaults
-	public static func defaultBootstrap(_ stores: [ConfigCategory: ConfigStore], file: StaticString = #fileID, line: UInt = #line) {
-        bootstrap(stores.merging(isPreview ? mockStores : defaultStores) { new, _ in new }, file: file, line: line)
+	public static func defaultBootstrap(
+        _ stores: [ConfigCategory: ConfigStore] = [:],
+        errorHandler: @escaping (ConfigFail) -> Void = defaultErrorHandler,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) {
+        bootstrap(
+            stores.merging(isPreview ? mockStores : defaultStores) { new, _ in new },
+            errorHandler: errorHandler,
+            file: file,
+            line: line
+        )
 	}
+
+    static func fail(_ error: ConfigFail) {
+        errorHandler(error)
+    }
+
+    /// The default error handler which triggers a fatal error in debug builds.
+    public static let defaultErrorHandler: (ConfigFail) -> Void = { error in
+        #if DEBUG
+        fatalError(error.localizedDescription)
+        #endif
+    }
 }
 
 // MARK: - Sendable support helpers

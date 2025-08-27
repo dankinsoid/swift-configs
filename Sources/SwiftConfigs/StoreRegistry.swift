@@ -24,9 +24,7 @@ public final class StoreRegistry {
     private var didStartFetch = false
     private var cancellation: Cancellation?
     private let fallbackStore: ConfigStore = .inMemory()
-#if DEBUG
     @Locked var didAccessStores = false
-#endif
     
     /// Initializes with a set of category stores
     public init(_ stores: [ConfigCategory: ConfigStore]) {
@@ -88,22 +86,14 @@ public final class StoreRegistry {
 
     /// Gets the appropriate store for a category
     public func store(for category: ConfigCategory?) -> ConfigStore {
-#if DEBUG
         didAccessStores = true
-#endif
         let stores: [ConfigStore] = if let category {
             stores.compactMap { category == $0.key ? $0.value : nil }
         } else {
             Array(stores.values)
         }
         if stores.isEmpty {
-#if DEBUG
-            if let category {
-                fatalError("No stores configured for \(category) category.")
-            } else {
-                fatalError("No stores configured.")
-            }
-#endif
+            ConfigSystem.fail(.noStoresAvailable(category: category))
             return fallbackStore
         } else if stores.count == 1 {
             return stores[0]

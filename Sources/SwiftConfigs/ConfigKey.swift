@@ -119,9 +119,7 @@ public extension Configs.Keys.Key {
                     return value
                 }
             } catch {
-#if DEBUG
-                fatalError("Failed to retrieve config value for key '\(name)': \(error)")
-#endif
+                ConfigSystem.fail(.retrievalFailed(key: name, error))
             }
             let result = defaultValue()
             do {
@@ -129,9 +127,7 @@ public extension Configs.Keys.Key {
                     try store.set(value, for: name)
                 }
             } catch {
-#if DEBUG
-                fatalError("Failed to cache default config value for key '\(name)': \(error)")
-#endif
+                ConfigSystem.fail(.storingFailed(key: name, error))
             }
             return result
         } set: { registry, newValue in
@@ -139,9 +135,7 @@ public extension Configs.Keys.Key {
             do {
                 try store.set(transformer.encode(newValue), for: name)
             } catch {
-#if DEBUG
-                fatalError("Failed to set config value for key '\(name)': \(error)")
-#endif
+                ConfigSystem.fail(.storingFailed(key: name, error))
             }
         } delete: { registry in
             try store(registry).set(nil, for: name)
@@ -150,11 +144,8 @@ public extension Configs.Keys.Key {
             do {
                 return try store.exists(name)
             } catch {
-#if DEBUG
-                fatalError("Failed to check existence of config key '\(name)': \(error)")
-#else
+                ConfigSystem.fail(.existenceCheckFailed(key: name, error))
                 return false
-#endif
             }
         } onChange: { registry, observer in
             let store = store(registry)
@@ -164,9 +155,7 @@ public extension Configs.Keys.Key {
                         try observer(transformer.decode(value))
                     }
                 } catch {
-#if DEBUG
-                    fatalError("Failed to retrieve updated config value for key '\(name)': \(error)")
-#endif
+                    ConfigSystem.fail(.retrievalFailed(key: name, error))
                 }
             }
             return cancellation ?? Cancellation {}
