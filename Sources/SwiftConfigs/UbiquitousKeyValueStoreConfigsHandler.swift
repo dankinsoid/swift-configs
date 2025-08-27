@@ -13,8 +13,7 @@
 
         private let ubiquitousStore: NSUbiquitousKeyValueStore
         private let listenHelper = ConfigStoreObserver()
-        private var notificationObserver: NSObjectProtocol?
-        private var lifecycleObservers: [NSObjectProtocol] = []
+        private var observers: [NSObjectProtocol] = []
 
         public static let `default` = UbiquitousKeyValueStoreConfigStore()
 
@@ -22,44 +21,27 @@
         /// - Parameter ubiquitousStore: The NSUbiquitousKeyValueStore instance to use
         public init(ubiquitousStore: NSUbiquitousKeyValueStore = .default) {
             self.ubiquitousStore = ubiquitousStore
-    
-            setupNotificationObserver()
-            setupLifecycleObservers()
+
+            setupObservers()
         }
 
         deinit {
-            if let observer = notificationObserver {
-                NotificationCenter.default.removeObserver(observer)
-            }
-            lifecycleObservers.forEach {
+            observers.forEach {
                 NotificationCenter.default.removeObserver($0)
             }
         }
 
-        private func setupNotificationObserver() {
-            notificationObserver = NotificationCenter.default.addObserver(
-                forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-                object: ubiquitousStore,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self else { return }
-                self.listenHelper.notifyChange(values: { self.ubiquitousStore.string(forKey: $0) })
-            }
-        }
-
-        private func setupLifecycleObservers() {
+        private func setupObservers() {
             let notifications: [Notification.Name]
-            #if canImport(UIKit)
-                notifications = [
-                    UIApplication.didFinishLaunchingNotification,
-                    UIApplication.willEnterForegroundNotification,
-                ]
-            #elseif canImport(AppKit)
-                notifications = [
-                    NSApplication.didFinishLaunchingNotification,
-                    NSApplication.willBecomeActiveNotification,
-                ]
-            #endif
+#if canImport(UIKit)
+            notifications = [
+                UIApplication.willEnterForegroundNotification,
+            ]
+#elseif canImport(AppKit)
+            notifications = [
+                NSApplication.willBecomeActiveNotification,
+            ]
+#endif
             for notification in notifications {
                 let observer = NotificationCenter.default.addObserver(
                     forName: notification,
@@ -68,16 +50,25 @@
                 ) { [weak self] _ in
                     self?.ubiquitousStore.synchronize()
                 }
-                lifecycleObservers.append(observer)
+                observers.append(observer)
             }
+            observers.append(
+                NotificationCenter.default.addObserver(
+                    forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+                    object: ubiquitousStore,
+                    queue: .main
+                ) { [weak self] _ in
+                    guard let self else { return }
+                    listenHelper.notifyChange(values: { self.ubiquitousStore.string(forKey: $0) })
+                }
+            )
         }
 
         // MARK: - ConfigStore Implementation
 
         public func fetch(completion: @escaping (Error?) -> Void) {
-            // Synchronize with iCloud
-            let success = ubiquitousStore.synchronize()
-            completion(success ? nil : UbiquitousStoreError.synchronizationFailed)
+            ubiquitousStore.synchronize()
+            completion(nil)
         }
 
         public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
@@ -124,10 +115,6 @@
         public func keys() -> Set<String>? {
             Set(ubiquitousStore.dictionaryRepresentation.keys)
         }
-    }
-
-    public enum UbiquitousStoreError: Error {
-        case synchronizationFailed
     }
 
     #if compiler(>=5.6)

@@ -50,6 +50,7 @@ public final class UserDefaultsConfigStore: ConfigStore {
 
     /// UserDefaults is always available, no fetching required
     public func fetch(completion: @escaping (Error?) -> Void) {
+        userDefaults.synchronize()
         completion(nil)
     }
 

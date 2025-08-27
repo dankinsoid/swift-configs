@@ -29,9 +29,9 @@ final class SwiftConfigsTests: XCTestCase {
         XCTAssertEqual(value, "defaultValue")
     }
 
-    func testReadValue() {
+    func testReadValue() throws {
         // Arrange
-        try? store.set("value", for: "key")
+        try store.set("value", for: "key")
 
         // Act
         let value = Configs().testKey

@@ -23,6 +23,7 @@ public final class StoreRegistry {
     private var didStartListen = false
     private var didStartFetch = false
     private var cancellation: Cancellation?
+    private let fallbackStore: ConfigStore = .inMemory()
 #if DEBUG
     @Locked var didAccessStores = false
 #endif
@@ -84,17 +85,33 @@ public final class StoreRegistry {
         }
         return Cancellation { self.cancel(id: id) }
     }
-    
+
     /// Gets the appropriate store for a category
     public func store(for category: ConfigCategory?) -> ConfigStore {
 #if DEBUG
         didAccessStores = true
 #endif
-        return MultiplexConfigStore(
-            stores: category.map { category in stores.compactMap { category == $0.key ? $0.value : nil } } ?? Array(stores.values)
-        )
+        let stores: [ConfigStore] = if let category {
+            stores.compactMap { category == $0.key ? $0.value : nil }
+        } else {
+            Array(stores.values)
+        }
+        if stores.isEmpty {
+#if DEBUG
+            if let category {
+                fatalError("No stores configured for \(category) category.")
+            } else {
+                fatalError("No stores configured.")
+            }
+#endif
+            return fallbackStore
+        } else if stores.count == 1 {
+            return stores[0]
+        } else {
+            return MultiplexConfigStore(stores: stores)
+        }
     }
-    
+
     private func cancel(id: UUID) {
         lock.withWriterLock { () -> Cancellation? in
             observers.removeValue(forKey: id)

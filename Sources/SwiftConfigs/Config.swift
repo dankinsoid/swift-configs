@@ -102,6 +102,7 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
 }
 
 public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
+
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,

@@ -76,13 +76,19 @@ public enum ConfigSystem {
 #endif
 
 private extension [ConfigCategory: ConfigStore] {
+    
     var withPlatformSpecific: [ConfigCategory: ConfigStore] {
         var stores = self
-        #if canImport(Security)
-            stores[.secure] = .keychain
-            stores[.critical] = .keychain(useSecureEnclave: true, secureEnclaveAccessControl: .userPresence)
-			stores[.syncedSecure] = .keychain(iCloudSync: true)
-        #endif
+#if canImport(Security)
+        stores[.secure] = .keychain
+        stores[.critical] = .keychain(useSecureEnclave: true, secureEnclaveAccessControl: .userPresence)
+        stores[.syncedSecure] = .keychain(iCloudSync: true)
+#if canImport(UIKit) || canImport(AppKit)
+        if #available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *), hasKVStoreEntitlement() {
+            stores[.synced] = .ubiquitous
+        }
+#endif
+#endif
         return stores
     }
 }
@@ -92,3 +98,13 @@ private extension [ConfigCategory: ConfigStore] {
 #else
     let isPreview = false
 #endif
+
+private func hasKVStoreEntitlement() -> Bool {
+#if canImport(Security)
+    guard let task = SecTaskCreateFromSelf(nil) else { return false }
+    if SecTaskCopyValueForEntitlement(task, "com.apple.developer.ubiquity-kvstore-identifier" as CFString, nil) != nil {
+        return true // entitlement exists (value is CFTypeRef, often a string)
+    }
+#endif
+    return false
+}

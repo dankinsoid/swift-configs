@@ -154,7 +154,7 @@ public extension Configs {
 
     /// Registers a listener for changes to a specific configuration key
     @discardableResult
-    func onChange<Value, P: KeyAccess>(_ key: Configs.Keys.Key<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
+    func onChange<Value, P: KeyAccess>(of key: Configs.Keys.Key<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
         let overriden = values[key.name]
         return key.onChange(registry: registry) { [overriden] value in
             if let overriden, let result = overriden as? Value {
@@ -167,9 +167,9 @@ public extension Configs {
 
     /// Registers a listener for changes to a specific configuration key path
     @discardableResult
-    func onChange<Value, P: KeyAccess>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ observer: @escaping (Value) -> Void) -> Cancellation {
+    func onChange<Value, P: KeyAccess>(of keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ observer: @escaping (Value) -> Void) -> Cancellation {
         let key = Keys()[keyPath: keyPath]
-        return onChange(key, observer)
+        return onChange(of: key, observer)
     }
 
     /// Returns an async sequence for configuration changes
@@ -184,9 +184,9 @@ public extension Configs {
 
     /// Returns an async sequence for changes to a specific configuration key
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes<Value, P: KeyAccess>(for key: Configs.Keys.Key<Value, P>) -> ConfigChangesSequence<Value> {
+    func changes<Value, P: KeyAccess>(of key: Configs.Keys.Key<Value, P>) -> ConfigChangesSequence<Value> {
         ConfigChangesSequence { observer in
-            self.onChange(key) { value in
+            self.onChange(of: key) { value in
                 observer(value)
             }
         }
@@ -194,9 +194,9 @@ public extension Configs {
 
     /// Returns an async sequence for changes to a specific configuration key path
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes<Value, P: KeyAccess>(for keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) -> ConfigChangesSequence<Value> {
+    func changes<Value, P: KeyAccess>(of keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>) -> ConfigChangesSequence<Value> {
         let key = Keys()[keyPath: keyPath]
-        return changes(for: key)
+        return changes(of: key)
     }
 }
 

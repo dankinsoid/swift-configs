@@ -150,10 +150,11 @@ public extension Configs.Keys.Key {
             do {
                 return try store.exists(name)
             } catch {
-                #if DEBUG
+#if DEBUG
                 fatalError("Failed to check existence of config key '\(name)': \(error)")
-                #endif
+#else
                 return false
+#endif
             }
         } onChange: { registry, observer in
             let store = store(registry)
