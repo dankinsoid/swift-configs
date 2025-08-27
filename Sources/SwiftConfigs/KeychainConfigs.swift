@@ -231,12 +231,9 @@ import Foundation
 		///
 		/// These values determine when your configuration values are accessible relative to
 		/// device lock state and synchronization capabilities.
-		public struct SecAttrAccessible: RawRepresentable, CaseIterable {
-			public let rawValue: CFString
+		public struct SecAttrAccessible: RawRepresentable {
 
-			public static var allCases: [SecAttrAccessible] {
-				[.whenUnlocked, .afterFirstUnlock, .always, .whenUnlockedThisDeviceOnly]
-			}
+			public let rawValue: CFString
 
 			public init(rawValue: CFString) {
 				self.rawValue = rawValue
@@ -257,6 +254,7 @@ import Foundation
 			/// Item is always accessible regardless of device lock state
 			///
 			/// - Warning: Least secure option. Use only for non-sensitive configuration data
+            @available(iOS, introduced: 4.0, deprecated: 12.0, message: "Use an accessibility level that provides some user protection, such as afterFirstUnlock")
 			public static let always = SecAttrAccessible(rawValue: kSecAttrAccessibleAlways)
 			
 			/// Item is accessible only when unlocked and never syncs to iCloud

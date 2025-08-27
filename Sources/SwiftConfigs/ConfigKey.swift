@@ -147,7 +147,7 @@ public extension Configs.Keys.Key {
             }
             let result = defaultValue()
             do {
-                if cacheDefaultValue, let value = try transformer.encode(result) {
+                if cacheDefaultValue, store.isWritable, let value = try transformer.encode(result) {
                     try store.set(value, for: name)
                 }
             } catch {
@@ -156,13 +156,18 @@ public extension Configs.Keys.Key {
             return result
         } set: { registry, newValue in
             let store = store(registry)
-            do {
-                try store.set(transformer.encode(newValue), for: name)
-            } catch {
-                ConfigSystem.fail(.storingFailed(key: name, error))
+            if store.isWritable {
+                do {
+                    try store.set(transformer.encode(newValue), for: name)
+                } catch {
+                    ConfigSystem.fail(.storingFailed(key: name, error))
+                }
             }
         } delete: { registry in
-            try store(registry).set(nil, for: name)
+            let store = store(registry)
+            if store.isWritable {
+                try store.set(nil, for: name)
+            }
         } exists: { registry in
             let store = store(registry)
             do {
