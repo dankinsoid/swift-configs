@@ -29,7 +29,7 @@ public struct ConfigCategory: Hashable, CustomStringConvertible {
     /// General synced configuration category
 	public static let synced = ConfigCategory("Synced")
     /// Environment variables configuration category
-	public static let environment = ConfigCategory("Environments")
+	public static let environment = ConfigCategory("Environment")
     /// In-memory configuration category for testing
 	public static let inMemory = ConfigCategory("In Memory")
 }

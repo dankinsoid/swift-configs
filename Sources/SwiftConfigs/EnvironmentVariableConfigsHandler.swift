@@ -60,7 +60,7 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
 extension ConfigStore where Self == EnvironmentVariableConfigStore {
 
 	/// Creates an environment variable configuration store
-	public static var environments: EnvironmentVariableConfigStore {
+	public static var environment: EnvironmentVariableConfigStore {
 		EnvironmentVariableConfigStore()
 	}
 }

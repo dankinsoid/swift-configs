@@ -1,8 +1,9 @@
 import Foundation
 
 /// Represents a cancellable configuration listener subscription
-public struct Cancellation {
-    private let _cancel: () -> Void
+public final class Cancellation {
+
+    private var _cancel: () -> Void
 
     /// Creates a cancellation token with a cancel closure
     public init(_ cancel: @escaping () -> Void) {
@@ -12,5 +13,10 @@ public struct Cancellation {
     /// Cancels the associated subscription
     public func cancel() {
         _cancel()
+        _cancel = {}
+    }
+
+    deinit {
+        cancel()
     }
 }

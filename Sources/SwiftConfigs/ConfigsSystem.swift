@@ -11,7 +11,7 @@ public enum ConfigSystem {
 	/// The default configuration stores for each category
 	public static let defaultStores: [ConfigCategory: ConfigStore] = [
 		.default: .userDefaults,
-		.environment: .environments,
+		.environment: .environment,
 		.inMemory: .inMemory,
 	]
 		.withPlatformSpecific

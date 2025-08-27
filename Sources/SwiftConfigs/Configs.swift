@@ -6,11 +6,17 @@ public struct Configs {
 
     /// The configs store responsible for querying and storing values.
     public let registry: StoreRegistry
-    private var values: [String: Any] = [:]
+    private let values: [String: Any]
 
     /// Initializes the `Configs` instance with the custom store registry.
     public init(registry: StoreRegistry) {
         self.registry = registry
+        self.values = [:]
+    }
+    
+    private init(registry: StoreRegistry, values: [String: Any]) {
+        self.registry = registry
+        self.values = values
     }
     
     /// Initializes the `Configs` instance with the default store registry.
@@ -100,7 +106,6 @@ public struct Configs {
     }
 
     /// Registers a listener for configuration changes
-    @discardableResult
     public func onChange(_ listener: @escaping (Configs) -> Void) -> Cancellation {
         registry.onChange {
             listener(self)
@@ -114,9 +119,9 @@ public extension Configs {
     ///   - key: The key to overwrite.
     ///   - value: The value to set.
     func with<Value, P: KeyAccess>(_ key: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ value: Value?) -> Self {
-        var copy = self
-        copy.values[Keys()[keyPath: key].name] = value
-        return copy
+        var values = values
+        values[Keys()[keyPath: key].name] = value
+        return Configs(registry: registry, values: values)
     }
 
     /// Fetches configuration values only if not already fetched
@@ -153,7 +158,6 @@ public extension Configs {
     }
 
     /// Registers a listener for changes to a specific configuration key
-    @discardableResult
     func onChange<Value, P: KeyAccess>(of key: Configs.Keys.Key<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
         let overriden = values[key.name]
         return key.onChange(registry: registry) { [overriden] value in
@@ -166,7 +170,6 @@ public extension Configs {
     }
 
     /// Registers a listener for changes to a specific configuration key path
-    @discardableResult
     func onChange<Value, P: KeyAccess>(of keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, P>>, _ observer: @escaping (Value) -> Void) -> Cancellation {
         let key = Keys()[keyPath: keyPath]
         return onChange(of: key, observer)

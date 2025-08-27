@@ -37,7 +37,7 @@ public extension Configs.Keys {
     }
 
     var serverURL: Key<String, ReadOnly> { 
-        Key("SERVER_URL", in: .environments, default: "https://api.example.com")
+        Key("SERVER_URL", in: .environment, default: "https://api.example.com")
     }
 }
 ```
@@ -70,7 +70,7 @@ ConfigSystem.bootstrap([
     .secure: .keychain,                // Sensitive data (tokens, passwords)
     .critical: .secureEnclave(),       // Maximum security with biometrics
     .syncedSecure: .keychain(iCloudSync: true), // Synced secure data
-    .environments: .environments,       // Environment variables
+    .environment: .environment,       // Environment variables
     .memory: .inMemory,                // Temporary/testing data
     .remote: .userDefaults             // Remote configuration cache
 ])
@@ -83,7 +83,7 @@ ConfigSystem.bootstrap([
 - **`.secure`** - Sensitive data requiring encryption
 - **`.critical`** - Maximum security with hardware protection
 - **`.syncedSecure`** - Secure data synced across devices
-- **`.environments`** - Environment variables
+- **`.environment`** - Environment variables
 - **`.memory`** - In-memory storage
 - **`.remote`** - Remote configuration cache
 
@@ -106,7 +106,7 @@ ConfigSystem.bootstrap([
 
 ### Other Stores
 ```swift
-.environments                  // Environment variables (read-only)
+.environment                  // Environment variables (read-only)
 .inMemory                      // In-memory storage
 .inMemory(["key": "value"])    // In-memory with initial values
 .noop                          // No-operation store
