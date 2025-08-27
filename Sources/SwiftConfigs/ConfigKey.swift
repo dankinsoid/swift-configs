@@ -12,9 +12,7 @@ public typealias ROKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
 public typealias RWKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
 
 public extension Configs {
-
     struct Keys {
-    
         public init() {}
 
         /// Read-only permission for configuration keys
@@ -24,7 +22,7 @@ public extension Configs {
             public static var isWritable: Bool { false }
         }
 
-        /// Read-write permission for configuration keys  
+        /// Read-write permission for configuration keys
         ///
         /// Keys with this permission support both reading and writing operations.
         public enum ReadWrite: KeyAccess {
@@ -37,7 +35,6 @@ public extension Configs {
         /// existence checking, and change observation. The `Access` type parameter enforces
         /// read-only or read-write permissions at compile time.
         public struct Key<Value, Access: KeyAccess> {
-
             public let name: String
             private let _get: (StoreRegistry) -> Value
             private let _set: (StoreRegistry, Value) -> Void
@@ -94,7 +91,7 @@ public extension Configs {
             public func onChange(registry: StoreRegistry, _ observer: @escaping (Value) -> Void) -> Cancellation {
                 _listen(registry, observer)
             }
-            
+
             /// Transforms this key to work with a different value type
             ///
             /// - Parameters:
@@ -132,7 +129,6 @@ public extension Configs {
 }
 
 public extension Configs.Keys.Key {
-
     init(
         _ name: String,
         store: @escaping (StoreRegistry) -> ConfigStore,
@@ -262,10 +258,10 @@ public extension Configs.Keys.Key {
     }
 
     /// Creates an optional configuration key for string-convertible values
-    /// 
+    ///
     /// - Parameters:
     ///   - key: The configuration key name
-    ///   - store: The configuration store to use  
+    ///   - store: The configuration store to use
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
@@ -430,7 +426,6 @@ public extension Configs.Keys.Key {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init(
         _ key: String,
@@ -458,7 +453,6 @@ public extension Configs.Keys.Key {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init(
         _ key: String,
@@ -487,7 +481,6 @@ public extension Configs.Keys.Key {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init<T>(
         _ key: String,
@@ -516,7 +509,6 @@ public extension Configs.Keys.Key {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    /// - Warning: This method is disfavored. Use explicit transformer initializers when possible.
     @_disfavoredOverload
     init<T>(
         _ key: String,

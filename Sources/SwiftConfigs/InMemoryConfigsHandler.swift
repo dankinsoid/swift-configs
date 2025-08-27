@@ -30,12 +30,12 @@ import Foundation
 ///     "feature_enabled": "true",
 ///     "api_timeout": "30"
 /// ])
-/// 
+///
 /// // Use in configuration system
 /// ConfigSystem.bootstrap([.default: store])
 /// ```
+/// - Tip: Use `.inMemory()` shorthand to create an in-memory store
 public final class InMemoryConfigStore: ConfigStore {
-
     /// All configuration values stored in memory
     ///
     /// - Warning: Direct modification triggers change notifications for all observers
@@ -51,11 +51,11 @@ public final class InMemoryConfigStore: ConfigStore {
             listenHelper.notifyChange(values: { newValues[$0] })
         }
     }
-	
-	/// Shared in-memory configuration store instance
-	///
-	/// - Note: Use with caution in multi-module applications to avoid unexpected state sharing
-	public static let shared = InMemoryConfigStore()
+
+    /// Shared in-memory configuration store instance
+    ///
+    /// - Note: Use with caution in multi-module applications to avoid unexpected state sharing
+    public static let shared = InMemoryConfigStore()
 
     private var _values: [String: String]
     private let lock = ReadWriteLock()
@@ -80,14 +80,14 @@ public final class InMemoryConfigStore: ConfigStore {
     public func keys() -> Set<String>? {
         Set(lock.withReaderLock { _values.keys })
     }
-    
+
     public func exists(_ key: String) -> Bool {
         lock.withReaderLock { _values[key] != nil }
     }
-	
-	public var isWritable: Bool {
-		true
-	}
+
+    public var isWritable: Bool {
+        true
+    }
 
     public func set(_ value: String?, for key: String) throws {
         lock.withWriterLock {
@@ -115,18 +115,17 @@ public final class InMemoryConfigStore: ConfigStore {
     }
 }
 
-extension ConfigStore where Self == InMemoryConfigStore {
+public extension ConfigStore where Self == InMemoryConfigStore {
+    /// Shared in-memory configuration store
+    static var inMemory: InMemoryConfigStore {
+        InMemoryConfigStore.shared
+    }
 
-	/// Shared in-memory configuration store
-	public static var inMemory: InMemoryConfigStore {
-		InMemoryConfigStore.shared
-	}
-
-	/// Creates a new in-memory configuration store with initial values
-	///
-	/// - Parameter values: Initial configuration values to populate the store
-	/// - Returns: A new store instance independent from the shared store
-	public static func inMemory(_ values: [String: String] = [:]) -> InMemoryConfigStore {
-		InMemoryConfigStore(values)
-	}
+    /// Creates a new in-memory configuration store with initial values
+    ///
+    /// - Parameter values: Initial configuration values to populate the store
+    /// - Returns: A new store instance independent from the shared store
+    static func inMemory(_ values: [String: String] = [:]) -> InMemoryConfigStore {
+        InMemoryConfigStore(values)
+    }
 }
