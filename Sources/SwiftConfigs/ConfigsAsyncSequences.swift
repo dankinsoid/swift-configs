@@ -4,7 +4,7 @@ import Foundation
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct ConfigChangesSequence<Element>: AsyncSequence {
 
-    private let onChange: @Sendable (@escaping (Element) -> Void) -> Cancellation
+    fileprivate let onChange: @Sendable (@escaping (Element) -> Void) -> Cancellation
 
     init(
         onChange: @escaping @Sendable (@escaping (Element) -> Void) -> Cancellation
@@ -49,4 +49,56 @@ public struct ConfigChangesSequence<Element>: AsyncSequence {
 #if compiler(>=5.6)
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     extension ConfigChangesSequence: Sendable {}
+#endif
+
+#if canImport(Combine)
+import Combine
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension ConfigChangesSequence: Publisher {
+
+    public typealias Output = Element
+    public typealias Failure = Never
+    
+    public func receive<S>(subscriber: S) where S: Subscriber, Never == S.Failure, Element == S.Input {
+        let subscription = ConfigChangesSubscription<S>(sequence: self, subscriber: subscriber)
+        subscriber.receive(subscription: subscription)
+    }
+}
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+private final class ConfigChangesSubscription<S: Subscriber>: Subscription where S.Failure == Never {
+
+    @Locked private var subscriber: S?
+    @Locked private var cancellation: Cancellation?
+    private let sequence: ConfigChangesSequence<S.Input>
+    
+    init(sequence: ConfigChangesSequence<S.Input>, subscriber: S) {
+        self.sequence = sequence
+        self.subscriber = subscriber
+    }
+
+    func request(_ demand: Subscribers.Demand) {
+        guard cancellation == nil else { return }
+
+        cancellation = sequence.onChange { [weak self] element in
+            guard let self = self, let subscriber = self.subscriber else { return }
+            _ = subscriber.receive(element)
+        }
+    }
+
+    func cancel() {
+        _cancellation.withWriterLock { cancellation in
+            let result = cancellation
+            cancellation = nil
+            return result
+        }?.cancel()
+
+        _subscriber.withWriterLock { subscriber in
+            let result = subscriber
+            subscriber = nil
+            return result
+        }?.receive(completion: .finished)
+    }
+}
 #endif

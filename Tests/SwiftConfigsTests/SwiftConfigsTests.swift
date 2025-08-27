@@ -18,7 +18,7 @@ final class SwiftConfigsTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        ConfigSystem.bootstrap([.default: store])
+        ConfigSystem.bootstrap([.default: store]) { _ in }
     }
 
     func testReadDefaultValue() {

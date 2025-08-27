@@ -52,16 +52,11 @@ let configs = Configs()
 
 ```swift
 // Read values
-let userID = configs[keyPath: \.userID]
-let token = configs[keyPath: \.apiToken]
-let serverURL = configs[keyPath: \.serverURL]
+let userID = configs.userID
+let token = configs.apiToken
+let serverURL = configs.serverURL
 
 // Write values (for RWKey only)
-configs[keyPath: \.apiToken] = "new-token"
-
-// Or use direct access
-let userID2 = configs.userID
-let token2 = configs.apiToken
 configs.apiToken = "new-token"
 ```
 
@@ -217,6 +212,40 @@ let task = Task {
 
 // Cancel the task when needed
 task.cancel()
+```
+
+### Combine Publisher Support
+
+When Combine is available, configuration changes can also be used as Publishers:
+
+```swift
+import Combine
+
+let configs = Configs()
+var cancellables = Set<AnyCancellable>()
+
+// Listen to configuration changes using Combine
+configs.changes()
+    .sink { updatedConfigs in
+        print("Configurations updated")
+    }
+    .store(in: &cancellables)
+
+// Listen to specific key changes using Combine
+configs.changes(for: \.apiToken)
+    .sink { newToken in
+        print("API token changed: \(newToken)")
+    }
+    .store(in: &cancellables)
+
+// Chain with other Combine operators
+configs.changes(for: \.apiToken)
+    .compactMap { $0 }
+    .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
+    .sink { debouncedToken in
+        print("Debounced API token: \(debouncedToken)")
+    }
+    .store(in: &cancellables)
 ```
 
 ## Value Transformers

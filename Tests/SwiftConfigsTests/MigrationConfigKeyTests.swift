@@ -2,14 +2,13 @@
 import XCTest
 
 final class MigrationConfigKeyTests: XCTestCase {
-    
-    private var isBootstrapped = false
+
     var store: InMemoryConfigStore!
     
     override func setUp() {
         super.setUp()
         store = InMemoryConfigStore()
-        ConfigSystem.bootstrap([.default: store])
+        ConfigSystem.bootstrap([.default: store]) { _ in }
     }
     
     override func tearDown() {
