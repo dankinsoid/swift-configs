@@ -49,16 +49,16 @@ public protocol ConfigStore: _SwiftConfigsSendableAnalyticsStore {
     /// Registers a listener for any configuration changes in the store
     ///
     /// - Parameter listener: Called whenever any configuration value changes
-    /// - Returns: Cancellation token to stop listening, or `nil` if not supported
-    func onChange(_ listener: @escaping () -> Void) -> Cancellation?
+    /// - Returns: Cancellation token to stop listening
+    func onChange(_ listener: @escaping () -> Void) -> Cancellation
     
     /// Registers a listener for changes to a specific configuration key
     ///
     /// - Parameters:
     ///   - key: The configuration key to monitor
     ///   - listener: Called with the new value when the key changes
-    /// - Returns: Cancellation token to stop listening, or `nil` if not supported
-    func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation?
+    /// - Returns: Cancellation token to stop listening
+    func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation
     
     /// Retrieves the string value for a configuration key
     ///
@@ -145,9 +145,9 @@ extension ConfigStore where Self: AnyObject {
     /// - Parameters:
     ///   - key: The configuration key to monitor  
     ///   - listener: Called with the new value when the key changes
-    /// - Returns: Cancellation token to stop listening, or `nil` if not supported
+    /// - Returns: Cancellation token to stop listening
     /// - Warning: Uses weak references to avoid retain cycles. Ensure the store instance remains alive.
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
         var lastValue: String? = try? get(key)
         return onChange { [weak self] in
             guard let self else { return }

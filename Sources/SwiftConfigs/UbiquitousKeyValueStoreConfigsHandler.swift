@@ -113,11 +113,11 @@
             completion(nil)
         }
 
-        public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+        public func onChange(_ listener: @escaping () -> Void) -> Cancellation {
             listenHelper.onChange(listener)
         }
 
-        public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+        public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
             listenHelper.onChangeOfKey(key, value: ubiquitousStore.string(forKey: key), listener)
         }
 

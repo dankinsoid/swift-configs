@@ -462,7 +462,7 @@ private class ThrowingRemoveStore: ConfigStore {
         completion(nil)
     }
     
-    func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+    func onChange(_ listener: @escaping () -> Void) -> Cancellation {
         nil
     }
     

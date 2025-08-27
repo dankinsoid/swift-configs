@@ -102,16 +102,16 @@ public struct MultiplexConfigStore: ConfigStore {
     /// - Parameter listener: Called when any store reports a configuration change
     /// - Returns: Cancellation token that stops all listeners, or `nil` if no stores support listening
     /// - Note: The listener may be called multiple times for a single logical change
-    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-        let cancellables = stores.compactMap { $0.onChange(listener) }
-        return cancellables.isEmpty ? nil : Cancellation {
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation {
+        let cancellables = stores.map { $0.onChange(listener) }
+        return Cancellation {
             cancellables.forEach { $0.cancel() }
         }
     }
     
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
-        let cancellables = stores.compactMap { $0.onChangeOfKey(key, listener) }
-        return cancellables.isEmpty ? nil : Cancellation {
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
+        let cancellables = stores.map { $0.onChangeOfKey(key, listener) }
+        return Cancellation {
             cancellables.forEach { $0.cancel() }
         }
     }
@@ -119,18 +119,19 @@ public struct MultiplexConfigStore: ConfigStore {
     /// Returns the union of all keys from all stores
     ///
     /// - Returns: Combined set of all keys across stores, or `nil` if no store supports key enumeration
-    /// - Note: Some stores may not support key enumeration, which doesn't affect the result
+    /// - Warning: If any store returns `nil` for keys, the entire result is `nil`
     public func keys() -> Set<String>? {
-        stores.reduce(into: Set<String>?.none) { result, store in
+        var allKeys: Set<String> = []
+        for store in stores {
             if let keys = store.keys() {
-                if result == nil {
-                    result = []
-                }
-                result?.formUnion(keys)
+                allKeys.formUnion(keys)
+            } else {
+                return nil
             }
         }
+        return allKeys
     }
-	
+
 	public var isWritable: Bool {
 		stores.contains(where: \.isWritable)
 	}

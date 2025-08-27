@@ -52,20 +52,18 @@ public struct MigrationConfigStore: ConfigStore {
     }
 
     /// Listen to any changes from either store.
-    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation {
         let a = newStore.onChange(listener)
         let b = legacyStore.onChange(listener)
         let c = [a, b].compactMap { $0 }
-        guard !c.isEmpty else { return nil }
         return Cancellation { c.forEach { $0.cancel() } }
     }
 
     /// Listen to changes of a particular key from either store.
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
         let a = newStore.onChangeOfKey(key, listener)
         let b = legacyStore.onChangeOfKey(key, listener)
         let c = [a, b].compactMap { $0 }
-        guard !c.isEmpty else { return nil }
         return Cancellation { c.forEach { $0.cancel() } }
     }
 

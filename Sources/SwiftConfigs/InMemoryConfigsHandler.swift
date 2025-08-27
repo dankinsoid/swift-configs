@@ -106,11 +106,11 @@ public final class InMemoryConfigStore: ConfigStore {
         listenHelper.notifyChange(values: { _ in nil })
     }
 
-    public func onChange(_ observer: @escaping () -> Void) -> Cancellation? {
+    public func onChange(_ observer: @escaping () -> Void) -> Cancellation {
         listenHelper.onChange(observer)
     }
 
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
         listenHelper.onChangeOfKey(key, value: values[key], listener)
     }
 }

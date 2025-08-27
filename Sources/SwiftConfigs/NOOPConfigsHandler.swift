@@ -29,12 +29,12 @@ public struct NOOPConfigStore: ConfigStore {
     }
 
     /// Returns no cancellation (no listening occurs)
-    public func onChange(_: @escaping () -> Void) -> Cancellation? {
-        nil
+    public func onChange(_: @escaping () -> Void) -> Cancellation {
+        Cancellation {}
     }
     
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
-        nil
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
+        Cancellation {}
     }
 	
 	/// Returns no keys

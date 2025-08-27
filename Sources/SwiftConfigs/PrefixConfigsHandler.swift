@@ -35,11 +35,11 @@ public struct PrefixConfigStore: ConfigStore {
         underlyingStore.fetch(completion: completion)
     }
     
-    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation {
         underlyingStore.onChange(listener)
     }
     
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
         underlyingStore.onChangeOfKey(prefixedKey(key), listener)
     }
     

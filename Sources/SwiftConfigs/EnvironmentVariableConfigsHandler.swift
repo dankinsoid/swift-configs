@@ -39,12 +39,12 @@ public struct EnvironmentVariableConfigStore: ConfigStore {
         completion(nil)
     }
     
-    public func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
-        nil
+    public func onChange(_ listener: @escaping () -> Void) -> Cancellation {
+        Cancellation {}
     }
-    
-    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
-        nil
+
+    public func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
+        Cancellation {}
     }
     
     public func get(_ key: String) -> String? {

@@ -12,11 +12,11 @@ import Foundation
 /// final class MyConfigStore: ConfigStore {
 ///     private let observer = ConfigStoreObserver()
 ///     
-///     func onChange(_ listener: @escaping () -> Void) -> Cancellation? {
+///     func onChange(_ listener: @escaping () -> Void) -> Cancellation {
 ///         return observer.onChange(listener)
 ///     }
 ///     
-///     func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation? {
+///     func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
 ///         let currentValue = try? get(key)
 ///         return observer.onChangeOfKey(key, value: currentValue, listener)
 ///     }

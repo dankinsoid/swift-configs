@@ -182,7 +182,7 @@ public extension Configs.Keys.Key {
                     ConfigSystem.fail(.retrievalFailed(key: name, error))
                 }
             }
-            return cancellation ?? Cancellation {}
+            return cancellation
         }
     }
 
