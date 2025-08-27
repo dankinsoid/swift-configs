@@ -6,7 +6,6 @@ import Foundation
 /// property wrappers. This protocol enables shared functionality while maintaining
 /// type safety for access permissions.
 public protocol ConfigWrapper<Value> {
-
     associatedtype Value
     /// The configuration key access type (ReadOnly or ReadWrite)
     associatedtype Access: KeyAccess
@@ -55,8 +54,8 @@ public extension ConfigWrapper {
 /// struct Settings {
 ///     @ROConfig(\.apiBaseURL)
 ///     var baseURL: String
-///     
-///     @ROConfig(\.maxRetryAttempts)  
+///
+///     @ROConfig(\.maxRetryAttempts)
 ///     var retries: Int
 /// }
 /// ```
@@ -96,10 +95,10 @@ public struct ROConfig<Value>: ConfigWrapper {
 /// struct UserSettings {
 ///     @RWConfig(\.themeName)
 ///     var theme: String
-///     
+///
 ///     @RWConfig(\.notificationsEnabled)
 ///     var notifications: Bool
-///     
+///
 ///     func resetTheme() {
 ///         $theme.delete() // Removes stored value, falls back to default
 ///     }
@@ -143,6 +142,14 @@ public struct RWConfig<Value>: ConfigWrapper {
 }
 
 public extension ConfigWrapper where Value: LosslessStringConvertible {
+    /// Creates a configuration wrapper for string-convertible values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
@@ -160,10 +167,43 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
             configs: Configs()
         )
     }
+
+    /// Creates a configuration wrapper for string-convertible values with a specific store
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    init(
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false
+    ) {
+        self.init(
+            Key(
+                key,
+                store: store,
+                as: .stringConvertable,
+                default: defaultValue(),
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
 }
 
 public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
-
+    /// Creates a configuration wrapper for enum and raw representable values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
@@ -181,18 +221,45 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
             configs: Configs()
         )
     }
-}
 
-public extension ConfigWrapper where Value: Codable {
-    /// Creates a configuration wrapper for Codable values
+    /// Creates a configuration wrapper for enum and raw representable values with a specific store
     ///
     /// - Parameters:
     ///   - defaultValue: The default value to use if the key is not found
-    ///   - key: The key string
-    ///   - category: The configuration category
-    ///   - cacheDefaultValue: Whether to cache the default value when first accessed
-    ///   - decoder: The JSON decoder to use for decoding values
-    ///   - encoder: The JSON encoder to use for encoding values
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    init(
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false
+    ) {
+        self.init(
+            Key(
+                key,
+                store: store,
+                as: .rawRepresentable,
+                default: defaultValue(),
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
+}
+
+public extension ConfigWrapper where Value: Codable {
+    /// Creates a configuration wrapper for JSON-encoded Codable values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     @_disfavoredOverload
     init(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
@@ -213,9 +280,48 @@ public extension ConfigWrapper where Value: Codable {
             configs: Configs()
         )
     }
+
+    /// Creates a configuration wrapper for JSON-encoded Codable values with a specific store
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    @_disfavoredOverload
+    init(
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false,
+        decoder: JSONDecoder = JSONDecoder(),
+        encoder: JSONEncoder = JSONEncoder()
+    ) {
+        self.init(
+            Key(
+                key,
+                store: store,
+                as: .json(decoder: decoder, encoder: encoder),
+                default: defaultValue(),
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
 }
 
 public extension ConfigWrapper {
+    /// Creates an optional configuration wrapper for string-convertible values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     init<T: LosslessStringConvertible>(
         wrappedValue _: @escaping @autoclosure () -> Value = nil,
         _ key: String,
@@ -234,6 +340,40 @@ public extension ConfigWrapper {
         )
     }
 
+    /// Creates an optional configuration wrapper for string-convertible values with a specific store
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    init<T: LosslessStringConvertible>(
+        wrappedValue _: @escaping @autoclosure () -> Value = nil,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false
+    ) where Value == T? {
+        self.init(
+            Key(
+                key,
+                store: store,
+                as: .optional(.stringConvertable),
+                default: nil,
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
+
+    /// Creates an optional configuration wrapper for enum and raw representable values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     init<T: RawRepresentable>(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
@@ -252,15 +392,42 @@ public extension ConfigWrapper {
         )
     }
 
-    /// Creates an optional configuration wrapper for Codable values
+    /// Creates an optional configuration wrapper for enum and raw representable values with a specific store
     ///
     /// - Parameters:
-    ///   - defaultValue: The default value to use if the key is not found
-    ///   - key: The key string
-    ///   - category: The configuration category
-    ///   - cacheDefaultValue: Whether to cache the default value when first accessed
-    ///   - decoder: The JSON decoder to use for decoding values
-    ///   - encoder: The JSON encoder to use for encoding values
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    init<T: RawRepresentable>(
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false
+    ) where T.RawValue: LosslessStringConvertible, Value == T? {
+        self.init(
+            Key(
+                key,
+                store: store,
+                as: .optional(.rawRepresentable),
+                default: defaultValue(),
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
+
+    /// Creates an optional configuration wrapper for JSON-encoded Codable values in a category
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - category: The configuration category (determines which store to use)
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     @_disfavoredOverload
     init<T: Codable>(
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
@@ -274,6 +441,37 @@ public extension ConfigWrapper {
             Key(
                 key,
                 in: category,
+                as: .optional(.json(decoder: decoder, encoder: encoder)),
+                default: defaultValue(),
+                cacheDefaultValue: cacheDefaultValue
+            ),
+            configs: Configs()
+        )
+    }
+
+    /// Creates an optional configuration wrapper for JSON-encoded Codable values with a specific store
+    ///
+    /// - Parameters:
+    ///   - defaultValue: The default value to use if the key is not found (typically `nil`)
+    ///   - key: The configuration key name
+    ///   - store: The specific configuration store to use
+    ///   - cacheDefaultValue: Whether to store the default value on first access
+    ///   - decoder: The JSON decoder to use for deserialization
+    ///   - encoder: The JSON encoder to use for serialization
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
+    @_disfavoredOverload
+    init<T: Codable>(
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
+        _ key: String,
+        store: ConfigStore,
+        cacheDefaultValue: Bool = false,
+        decoder: JSONDecoder = JSONDecoder(),
+        encoder: JSONEncoder = JSONEncoder()
+    ) where Value == T? {
+        self.init(
+            Key(
+                key,
+                store: store,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue

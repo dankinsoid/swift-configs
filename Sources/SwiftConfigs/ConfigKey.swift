@@ -194,6 +194,7 @@ public extension Configs.Keys.Key {
     ///   - transformer: How to encode/decode values for storage
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:as:default:cacheDefaultValue:)`
     init(
         _ key: String,
         store: ConfigStore,
@@ -218,6 +219,7 @@ public extension Configs.Keys.Key {
     ///   - transformer: How to encode/decode values for storage
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:as:default:cacheDefaultValue:)`
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -241,7 +243,8 @@ public extension Configs.Keys.Key {
     ///   - store: The configuration store to use
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
-    /// - Note: Uses the built-in string conversion transformer for encoding/decoding.
+    /// - Note: Uses the built-in string conversion transformer for encoding/decoding
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:default:cacheDefaultValue:)`
     init(
         _ key: String,
         store: ConfigStore,
@@ -287,6 +290,7 @@ public extension Configs.Keys.Key {
     ///   - category: The configuration category (determines which store to use)
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:default:cacheDefaultValue:)`
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -309,7 +313,7 @@ public extension Configs.Keys.Key {
     ///   - category: The configuration category (determines which store to use)
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
-    /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
+    /// - Note: Returns `nil` when the key doesn't exist or conversion fails. Recommended for most use cases as it integrates with the configuration system
     init<T>(
         _ key: String,
         in category: ConfigCategory,
