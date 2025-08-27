@@ -27,17 +27,17 @@ import SwiftConfigs
 
 ```swift
 public extension Configs.Keys {
-
-    var apiToken: Key<String?, ReadWrite> {
-        Key("api-token", in: .secure, default: nil)
+    
+    var apiToken: RWKey<String?> {
+        RWKey("api-token", in: .secure, default: nil)
     }
-
-    var userID: Key<UUID, ReadOnly> { 
-        Key("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
+    
+    var userID: ROKey<UUID> { 
+        ROKey("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
     }
-
-    var serverURL: Key<String, ReadOnly> { 
-        Key("SERVER_URL", in: .environment, default: "https://api.example.com")
+    
+    var serverURL: ROKey<String> { 
+        ROKey("SERVER_URL", in: .environment, default: "https://api.example.com")
     }
 }
 ```
@@ -52,11 +52,16 @@ let configs = Configs()
 
 ```swift
 // Read values
-let userID = configs.userID
-let token = configs.apiToken
-let serverURL = configs.serverURL
+let userID = configs[keyPath: \.userID]
+let token = configs[keyPath: \.apiToken]
+let serverURL = configs[keyPath: \.serverURL]
 
-// Write values (for ReadWrite Key only)
+// Write values (for RWKey only)
+configs[keyPath: \.apiToken] = "new-token"
+
+// Or use direct access
+let userID2 = configs.userID
+let token2 = configs.apiToken
 configs.apiToken = "new-token"
 ```
 
@@ -97,21 +102,25 @@ ConfigSystem.bootstrap([
 
 ### Keychain (iOS/macOS)
 ```swift
-.keychain                        // Basic keychain storage
-.keychain(iCloudSync: true)      // iCloud Keychain sync
-.secureEnclave()                 // Secure Enclave with user presence
-.biometricSecureEnclave()        // Secure Enclave with biometrics
-.passcodeSecureEnclave()         // Secure Enclave with device passcode
+.keychain                                 // Basic keychain storage
+.keychain(iCloudSync: true)               // iCloud Keychain sync
+.secureEnclave()                          // Secure Enclave with user presence
+.biometricSecureEnclave()                 // Secure Enclave with biometrics
+.passcodeSecureEnclave()                  // Secure Enclave with device passcode
+```
+
+### iCloud Key-Value Store
+```swift
+.ubiquitous                               // Default iCloud key-value store
+.ubiquitous(store: customUbiquitousStore) // Custom iCloud store instance
 ```
 
 ### Other Stores
 ```swift
-.environment                  // Environment variables (read-only)
-.inMemory                      // In-memory storage
-.inMemory(["key": "value"])    // In-memory with initial values
-.noop                          // No-operation store
-.multiple(store1, store2)  // Multiplex multiple stores
-.migration(from: store1, to: store2) // Fallback to next store if value not found, useful for migrations or debugging read only storages
+.environment                              // Environment variables (read-only)
+.inMemory                                 // In-memory storage
+.inMemory(["key": "value"])               // In-memory with initial values
+.multiple(store1, store2)                 // Multiplex multiple stores (fallback chain)
 ```
 
 ## Property Wrapper API
@@ -120,19 +129,27 @@ Use property wrappers for inline configuration management:
 
 ```swift
 struct AppSettings {
-
-    @ROConfig(\.userID) var userID
     
-    @RWConfig("api-token", in: .secure) 
+    // Using key path reference to predefined keys
+    @ROConfig(\.userID) 
+    var userID: UUID
+    
+    // Using category-based initialization (recommended)
+    @RWConfig(wrappedValue: nil, "api-token", in: .secure) 
     var apiToken: String?
     
-    @RWConfig("user-preferences", in: .default)
-    var preferences: UserPreferences = UserPreferences()
+    @RWConfig(wrappedValue: UserPreferences(), "user-preferences", in: .default)
+    var preferences: UserPreferences
+    
+    // Using store-based initialization (for specific store targeting)
+    @RWConfig(wrappedValue: false, "debug-mode", store: .inMemory) 
+    var debugMode: Bool
 }
 
 let settings = AppSettings()
 print(settings.userID)           // Read value
 settings.apiToken = "new-token"  // Write value
+settings.preferences.theme = .dark
 ```
 
 ## Async/Await Support
@@ -208,29 +225,38 @@ SwiftConfigs automatically handles common types:
 
 ```swift
 public extension Configs.Keys {
-
+    
     // String-convertible types
-    var count: Key<Int, ReadOnly> { 
-        Key("count", in: .default, default: 0)
+    var count: ROKey<Int> { 
+        ROKey("count", in: .default, default: 0)
     }
-
-    var rate: Key<Double, ReadOnly> {
-        Key("rate", in: .default, default: 1.0)
+    
+    var rate: ROKey<Double> {
+        ROKey("rate", in: .default, default: 1.0)
     }
     
     // Enum types
-    var theme: Key<Theme, ReadOnly> { 
-        Key("theme", in: .default, default: .light)
+    var theme: ROKey<Theme> { 
+        ROKey("theme", in: .default, default: .light)
     }
     
     // Codable types (stored as JSON)
-    var settings: Key<AppSettings, ReadOnly> {
-        Key("settings", in: .default, default: AppSettings())
+    var settings: ROKey<AppSettings> {
+        ROKey("settings", in: .default, default: AppSettings())
     }
     
     // Optional types
-    var optionalValue: Key<String?, ReadOnly> {
-        Key("optional", in: .default, default: nil)
+    var optionalValue: ROKey<String?> {
+        ROKey("optional", in: .default, default: nil)
+    }
+    
+    // Using specific stores when needed
+    var tempSetting: RWKey<String> {
+        RWKey("temp", store: .inMemory, default: "temp-value")
+    }
+    
+    var secureToken: RWKey<String?> {
+        RWKey("secure-token", store: .keychain, default: nil)
     }
 }
 ```
@@ -241,26 +267,81 @@ Handle configuration schema changes gracefully:
 
 ```swift
 public extension Configs.Keys {
-
+    
     // Migrate from old boolean to new enum
-    var notificationStyle: Key<NotificationStyle, ReadOnly> {
-        .migration(
-            from: oldNotificationsEnabled,
-            to: Key("notification-style", in: .default, default: .none)
-        ) { oldValue in
-            oldValue ? .all : .none
-        }
+    var notificationStyle: ROKey<NotificationStyle> {
+        ROKey("notification-style", in: .default, default: .none)
     }
     
-    private var oldNotificationsEnabled: Key<Bool, ReadOnly> {
-        Key("notifications-enabled", in: .default, default: false)
+    private var oldNotificationsEnabled: ROKey<Bool> {
+        ROKey("notifications-enabled", in: .default, default: false)
     }
+    
+    // Custom migration using multiplex stores can be done at bootstrap level:
+    // ConfigSystem.bootstrap([
+    //     .default: .multiple(.userDefaults, .inMemory) // Check multiple sources
+    // ])
 }
 ```
 
 ## Custom Configuration Stores
 
-You can create custom storage backends by implementing the `ConfigStore` protocol. See the protocol documentation for detailed implementation examples.
+Create custom storage backends by implementing the `ConfigStore` protocol:
+
+```swift
+import Foundation
+
+struct MyCustomStore: ConfigStore {
+    var isWritable: Bool { true }
+    
+    func fetch(completion: @escaping (Error?) -> Void) {
+        // Fetch latest values from your backend
+        completion(nil)
+    }
+    
+    func onChange(_ listener: @escaping () -> Void) -> Cancellation {
+        // Set up change notifications
+        return Cancellation { /* cleanup */ }
+    }
+    
+    func onChangeOfKey(_ key: String, _ listener: @escaping (String?) -> Void) -> Cancellation {
+        // Set up key-specific change notifications
+        return Cancellation { /* cleanup */ }
+    }
+    
+    func get(_ key: String) throws -> String? {
+        // Retrieve value for key
+        return myDatabase.getValue(key)
+    }
+    
+    func set(_ value: String?, for key: String) throws {
+        // Store value for key
+        if let value = value {
+            myDatabase.setValue(value, forKey: key)
+        } else {
+            myDatabase.removeValue(forKey: key)
+        }
+    }
+    
+    func exists(_ key: String) throws -> Bool {
+        return myDatabase.hasValue(forKey: key)
+    }
+    
+    func removeAll() throws {
+        myDatabase.clearAll()
+    }
+    
+    func keys() -> Set<String>? {
+        return Set(myDatabase.allKeys())
+    }
+}
+
+// Use your custom store
+ConfigSystem.bootstrap([
+    .default: MyCustomStore(),
+    .secure: .keychain
+])
+```
 
 ## Available Implementations
 
@@ -321,21 +402,28 @@ Or add it through Xcode:
 
 ## Best Practices
 
-1. **Define keys in extensions** for organization and discoverability
+1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using `ROKey`/`RWKey` type aliases
 2. **Use appropriate categories** for different security and persistence needs
 3. **Provide sensible defaults** for all configuration keys
-4. **Use read-only keys (`Key<Value, ReadOnly>`)** when values shouldn't be modified at runtime
-5. **Bootstrap the system early** in your app lifecycle
-6. **Handle migration** when changing configuration schemas
-7. **Use property wrappers** for clean SwiftUI integration
+4. **Use read-only keys (`ROKey`)** when values shouldn't be modified at runtime
+5. **Bootstrap the system early** in your app lifecycle before accessing any configuration
+6. **Prefer category-based initialization** (`init(_:in:default:)`) over store-based for most use cases
+7. **Use store-based initialization** (`init(_:store:default:)`) only when you need specific store targeting or before system bootstrap
+8. **Handle migration** using multiplex stores or custom migration logic
+9. **Use property wrappers** for clean SwiftUI and declarative code integration
+10. **Leverage async/await** for remote configuration fetching
+11. **Use change observation** for reactive configuration updates
 
 ## Security Considerations
 
-- Use **`.secure`** category for sensitive data (API tokens, passwords)
-- Use **`.critical`** for maximum security on supported devices
+- Use **`.secure`** category for sensitive data (API tokens, passwords) - uses Keychain encryption
+- Use **`.critical`** for maximum security with hardware-backed Secure Enclave protection
+- Use **`.syncedSecure`** carefully - only for data that should be shared across devices via iCloud Keychain
 - **Never log** configuration values that might contain sensitive data
-- Use **`.syncedSecure`** carefully - only for data that should be shared across devices
-- **Environment variables** are read-only and visible to the process
+- **Environment variables** are read-only and visible to the entire process and system
+- **Keychain accessibility levels** control when encrypted data can be accessed (device locked/unlocked)
+- **Biometric authentication** adds an extra layer of security for critical configuration data
+- **iCloud sync** (`.ubiquitous`) has a 1MB total storage limit and is eventually consistent
 
 ## Contributing
 
