@@ -51,7 +51,7 @@ final class SwiftConfigsTests: XCTestCase {
     func testListen() {
         // Arrange
         var fetched = false
-        Configs().onChange { _ in
+        let cancellation = Configs().onChange { _ in
             fetched = true
         }
 

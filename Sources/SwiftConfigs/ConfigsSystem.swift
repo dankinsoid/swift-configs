@@ -47,11 +47,13 @@ public enum ConfigSystem {
         registry.stores = stores
         self.errorHandler = errorHandler
         if isBootstrapped {
-            ConfigSystem.fail(.bootstrapCanBeCalledOnlyOnce)
+            if !isRunningTests {
+                ConfigSystem.fail(.bootstrapCanBeCalledOnlyOnce)
+            }
         } else {
             isBootstrapped = true
         }
-        if registry.didAccessStores {
+        if registry.didAccessStores, !isRunningTests {
             ConfigSystem.fail(.bootstrapMustBeCalledBeforeUsingConfigs)
         }
 	}
@@ -109,7 +111,9 @@ private extension [ConfigCategory: ConfigStore] {
 }
 
 #if DEBUG
+    let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || ProcessInfo.processInfo.processName == "XCPreviewAgent"
 #else
+    let isRunningTests = false
     let isPreview = false
 #endif

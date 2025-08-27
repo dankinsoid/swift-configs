@@ -3,6 +3,7 @@ import XCTest
 
 final class MigrationConfigKeyTests: XCTestCase {
     
+    private var isBootstrapped = false
     var store: InMemoryConfigStore!
     
     override func setUp() {
@@ -463,7 +464,7 @@ private class ThrowingRemoveStore: ConfigStore {
     }
     
     func onChange(_ listener: @escaping () -> Void) -> Cancellation {
-        nil
+        Cancellation {}
     }
     
     func get(_ key: String) -> String? {

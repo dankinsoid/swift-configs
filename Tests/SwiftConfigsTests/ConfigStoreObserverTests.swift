@@ -271,7 +271,7 @@ final class ConfigStoreObserverTests: XCTestCase {
         XCTAssertEqual(receivedValue, "integration_value")
         
         // Cleanup
-        cancellation?.cancel()
+        cancellation.cancel()
     }
     
     func testIntegrationWithInMemoryStoreGlobalChange() {
@@ -292,7 +292,7 @@ final class ConfigStoreObserverTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
         
         // Cleanup
-        cancellation?.cancel()
+        cancellation.cancel()
     }
     
     func testIntegrationWithInMemoryStoreRemoveAll() {
@@ -323,8 +323,8 @@ final class ConfigStoreObserverTests: XCTestCase {
         XCTAssertNil(receivedValue2)
         
         // Cleanup
-        cancellation1?.cancel()
-        cancellation2?.cancel()
+        cancellation1.cancel()
+        cancellation2.cancel()
     }
     
     // MARK: - Thread Safety Tests
