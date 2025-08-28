@@ -147,6 +147,43 @@ settings.apiToken = "new-token"  // Write value
 settings.preferences.theme = .dark
 ```
 
+## SwiftUI Property Wrappers
+
+For SwiftUI views, use `ROConfigState` and `RWConfigState` property wrappers that automatically trigger view updates when configuration changes:
+
+```swift
+struct SettingsView: View {
+    
+    // Read-only configuration with automatic view updates
+    @ROConfigState(\.userID) 
+    var userID: UUID
+    
+    // Read-write configuration with automatic view updates
+    @RWConfigState("theme", in: .default) 
+    var theme = Theme.light
+    
+    @RWConfigState("counter", in: .default) 
+    var counter = 0
+    
+    var body: some View {
+        VStack {
+            Text("User: \(userID)")
+            
+            Picker("Theme", selection: $theme) {
+                Text("Light").tag(Theme.light)
+                Text("Dark").tag(Theme.dark)
+            }
+            
+            Text("Count: \(counter)")
+            
+            Button("Increment") {
+                counter += 1
+            }
+        }
+    }
+}
+```
+
 ## Async/Await Support
 
 ```swift
