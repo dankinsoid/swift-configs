@@ -320,8 +320,8 @@ final class MigrationConfigKeyTests: XCTestCase {
         let throwingStore = ThrowingRemoveStore()
         let newKey = TestKeys().newStringKey
         
-        ConfigSystem.bootstrap([.default: throwingStore])
-        defer { ConfigSystem.bootstrap([.default: store]) }
+        ConfigSystem.bootstrap([.default: throwingStore]) { _ in }
+        defer { ConfigSystem.bootstrap([.default: store]) { _ in } }
         
         try? throwingStore.set("new_value", for: newKey.name)
         
