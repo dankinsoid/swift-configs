@@ -45,6 +45,7 @@ public struct RWConfigState<Value>: DynamicProperty, ConfigWrapper {
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@MainActor
 private final class ConfigObserver<Value>: ObservableObject {
 
     private var cancellation: Cancellation?
@@ -56,10 +57,8 @@ private final class ConfigObserver<Value>: ObservableObject {
 
     private func startObservingIfNeeded<Access>(configs: Configs, key: Configs.Keys.Key<Value, Access>) {
         guard cancellation == nil else { return }
-        cancellation = configs.onChange(of: key) { [weak self] newValue in
-            DispatchQueue.main.async {
-                self?.updater.toggle()
-            }
+        cancellation = configs.onChange(of: key) { @MainActor [weak self] newValue in
+            self?.updater.toggle()
         }
     }
 
