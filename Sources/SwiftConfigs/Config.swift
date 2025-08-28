@@ -21,6 +21,7 @@ public protocol ConfigWrapper<Value> {
 }
 
 public extension ConfigWrapper {
+
     /// Creates a wrapper using a key path to the configuration key
     ///
     /// This convenience initializer allows using key paths for cleaner syntax when
@@ -39,6 +40,12 @@ public extension ConfigWrapper {
     /// - Note: Returns `false` if the key only has a default value but no stored value
     func exists() -> Bool {
         configs.exists(key)
+    }
+
+    /// Registers a listener for changes to this configuration key
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    var changes: ConfigChangesSequence<Value> {
+        configs.changes(of: key)
     }
 }
 

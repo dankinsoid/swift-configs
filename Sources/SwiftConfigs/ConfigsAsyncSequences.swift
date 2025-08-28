@@ -2,7 +2,7 @@ import Foundation
 
 /// Async sequence for configuration changes
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct ConfigChangesSequence<Element>: AsyncSequence {
+public struct ConfigChangesSequence<Element> {
 
     fileprivate let onChange: @Sendable (@escaping (Element) -> Void) -> Cancellation
 
@@ -10,9 +10,13 @@ public struct ConfigChangesSequence<Element>: AsyncSequence {
         onChange: @escaping @Sendable (@escaping (Element) -> Void) -> Cancellation
     ) {
         self.onChange = onChange
-    }
+    } 
+}
 
-    public func makeAsyncIterator() -> AsyncIterator {
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension ConfigChangesSequence: AsyncSequence {
+
+       public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(onChange: onChange)
     }
 
@@ -47,14 +51,14 @@ public struct ConfigChangesSequence<Element>: AsyncSequence {
 }
 
 #if compiler(>=5.6)
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    extension ConfigChangesSequence: Sendable {}
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension ConfigChangesSequence: Sendable {}
 #endif
 
 #if canImport(Combine)
 import Combine
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension ConfigChangesSequence: Publisher {
 
     public typealias Output = Element
@@ -66,7 +70,7 @@ extension ConfigChangesSequence: Publisher {
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 private final class ConfigChangesSubscription<S: Subscriber>: Subscription where S.Failure == Never {
 
     @Locked private var subscriber: S?
