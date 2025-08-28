@@ -57,14 +57,14 @@ public extension Configs {
                 _ key: String,
                 get: @escaping (StoreRegistry) -> Value,
                 set: @escaping (StoreRegistry, Value) -> Void,
-                delete: @escaping (StoreRegistry) throws -> Void,
+                remove: @escaping (StoreRegistry) throws -> Void,
                 exists: @escaping (StoreRegistry) -> Bool,
                 onChange: @escaping (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
             ) {
                 name = key
                 _get = get
                 _set = set
-                _remove = delete
+                _remove = remove
                 _exists = exists
                 _listen = onChange
             }
@@ -80,7 +80,7 @@ public extension Configs {
             /// Removes the stored value for this key
             ///
             /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
-            public func delete(registry: StoreRegistry) {
+            public func remove(registry: StoreRegistry) {
                 try? _remove(registry)
             }
 
@@ -111,8 +111,8 @@ public extension Configs {
                     set: { registry, newValue in
                         self.set(registry: registry, reverseTransform(newValue))
                     },
-                    delete: { registry in
-                        self.delete(registry: registry)
+                    remove: { registry in
+                        self.remove(registry: registry)
                     },
                     exists: { registry in
                         self.exists(registry: registry)
@@ -163,7 +163,7 @@ public extension Configs.Keys.Key {
                     ConfigSystem.fail(.storingFailed(key: name, error))
                 }
             }
-        } delete: { registry in
+        } remove: { registry in
             let store = store(registry)
             if store.isWritable {
                 try store.set(nil, for: name)

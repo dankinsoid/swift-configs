@@ -23,15 +23,15 @@ extension Configs.Keys.Key {
                     newKey.set(registry: registry, value)
                 }
                 if firstReadPolicy.contains(.removeOld), OldP.isWritable {
-                    oldKey.delete(registry: registry)
+                    oldKey.remove(registry: registry)
                 }
                 return value
             }
         } set: { registry, newValue in
             newKey.set(registry: registry, newValue)
-        } delete: { registry in
-            oldKey.delete(registry: registry)
-            newKey.delete(registry: registry)
+        } remove: { registry in
+            oldKey.remove(registry: registry)
+            newKey.remove(registry: registry)
         } exists: { registry in
             oldKey.exists(registry: registry) || newKey.exists(registry: registry)
         } onChange: { registry, observer in

@@ -104,14 +104,14 @@ public struct Configs {
     }
 
     /// Removes a configuration value using a key path
-    public func delete<Value>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadWrite>>) {
+    public func remove<Value>(_ keyPath: KeyPath<Configs.Keys, Configs.Keys.Key<Value, Configs.Keys.ReadWrite>>) {
         let key = Keys()[keyPath: keyPath]
-        delete(key)
+        remove(key)
     }
 
     /// Removes a configuration value using a config key
-    public func delete<Value>(_ key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>) {
-        key.delete(registry: registry)
+    public func remove<Value>(_ key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>) {
+        key.remove(registry: registry)
     }
 
     /// Checks if a configuration value exists using a key path

@@ -10,6 +10,11 @@ public struct ROConfigState<Value>: DynamicProperty, ConfigWrapper {
     public var wrappedValue: Value {
         configs.get(key)
     }
+    
+    /// Provides access to the wrapper itself for advanced operations
+    public var projectedValue: Self {
+        self
+    }
 
     public let key: ROKey<Value>
     public let configs: Configs
@@ -32,9 +37,15 @@ public struct RWConfigState<Value>: DynamicProperty, ConfigWrapper {
         get { configs.get(key) }
         nonmutating set { configs.set(key, newValue) }
     }
+    
+    /// Provides access to the wrapper itself for advanced operations
+    public var projectedValue: Self {
+        self
+    }
 
     public let key: RWKey<Value>
     public let configs: Configs
+
     @StateObject private var observer: ConfigObserver<Value>
 
     public init(_ key: RWKey<Value>, configs: Configs) {

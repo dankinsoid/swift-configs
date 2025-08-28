@@ -49,6 +49,36 @@ public extension ConfigWrapper {
     }
 }
 
+public extension ConfigWrapper where Access == Configs.Keys.ReadOnly {
+
+    /// The current configuration value
+    var value: Value {
+        configs.get(key)
+    }
+}
+
+
+public extension ConfigWrapper where Access == Configs.Keys.ReadWrite {
+
+    /// The current configuration value
+    var value: Value {
+        get {
+            configs.get(key)
+        }
+        nonmutating set {
+            configs.set(key, newValue)
+        }
+    }
+
+    /// Removes the stored value, falling back to the key's default
+    ///
+    /// After deletion, accessing the wrapped value will return the key's default value.
+    /// This operation is persisted to the underlying store and triggers change notifications.
+    func remove() {
+        configs.remove(key)
+    }
+}
+
 /// Property wrapper for read-only configuration values
 ///
 /// Use this property wrapper for configuration values that should not be modified
@@ -137,14 +167,6 @@ public struct RWConfig<Value>: ConfigWrapper {
     public init(_ key: Key, configs: Configs) {
         self.key = key
         self.configs = configs
-    }
-
-    /// Removes the stored value, falling back to the key's default
-    ///
-    /// After deletion, accessing the wrapped value will return the key's default value.
-    /// This operation is persisted to the underlying store and triggers change notifications.
-    public func delete() {
-        configs.delete(key)
     }
 }
 
@@ -330,7 +352,7 @@ public extension ConfigWrapper {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:cacheDefaultValue:)`
     init<T: LosslessStringConvertible>(
-        wrappedValue _: @escaping @autoclosure () -> Value = nil,
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         in category: ConfigCategory,
         cacheDefaultValue: Bool = false
@@ -340,7 +362,7 @@ public extension ConfigWrapper {
                 key,
                 in: category,
                 as: .optional(.stringConvertable),
-                default: nil,
+                default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
             configs: Configs()
@@ -356,7 +378,7 @@ public extension ConfigWrapper {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:cacheDefaultValue:)`
     init<T: LosslessStringConvertible>(
-        wrappedValue _: @escaping @autoclosure () -> Value = nil,
+        wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         store: ConfigStore,
         cacheDefaultValue: Bool = false
@@ -366,7 +388,7 @@ public extension ConfigWrapper {
                 key,
                 store: store,
                 as: .optional(.stringConvertable),
-                default: nil,
+                default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
             configs: Configs()
