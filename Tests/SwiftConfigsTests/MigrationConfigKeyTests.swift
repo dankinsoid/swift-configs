@@ -308,7 +308,7 @@ final class MigrationConfigKeyTests: XCTestCase {
         ) { $0.uppercased() }
         
         // Act
-        migrationKey.delete(registry: ConfigSystem.registry)
+        migrationKey.remove(registry: ConfigSystem.registry)
         
         // Assert
         XCTAssertFalse(oldKey.exists(registry: ConfigSystem.registry))
