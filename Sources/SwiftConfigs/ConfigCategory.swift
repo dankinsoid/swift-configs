@@ -32,6 +32,8 @@ public struct ConfigCategory: Hashable, CustomStringConvertible {
 	public static let environment = ConfigCategory("Environment")
     /// In-memory configuration category for testing
 	public static let inMemory = ConfigCategory("In Memory")
+    /// Static app metadata from Info.plist or other bundled manifests
+    public static let manifest = ConfigCategory("Manifest")
 }
 
 #if compiler(>=5.6)

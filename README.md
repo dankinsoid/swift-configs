@@ -113,6 +113,8 @@ ConfigSystem.bootstrap([
 ### Other Stores
 ```swift
 .environment                              // Environment variables (read-only)
+.infoPlist                                // App bundle Info.plist (read-only)
+.infoPlist(for: bundle)                   // Custom bundle Info.plist
 .inMemory                                 // In-memory storage
 .inMemory(["key": "value"])               // In-memory with initial values
 .multiple(store1, store2)                 // Multiplex multiple stores (fallback chain)

@@ -24,7 +24,8 @@ public enum ConfigSystem {
 		.secure: .inMemory(),
 		.critical: .inMemory(),
 		.syncedSecure: .inMemory(),
-		.remote: .inMemory()
+		.remote: .inMemory(),
+        .manifest: .inMemory()
 	]
 
     static let registry = StoreRegistry(isPreview ? mockStores : defaultStores)
@@ -105,6 +106,9 @@ private extension [ConfigCategory: ConfigStore] {
         stores[.secure] = .keychain
         stores[.critical] = .keychain(useSecureEnclave: true, secureEnclaveAccessControl: .userPresence)
         stores[.syncedSecure] = .keychain(iCloudSync: true)
+#endif
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+        stores[.manifest] = .infoPlist
 #endif
         return stores
     }
