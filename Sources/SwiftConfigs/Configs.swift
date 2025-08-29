@@ -181,6 +181,20 @@ public extension Configs {
         values[Keys()[keyPath: key].name] = value
         return Configs(registry: registry, values: values)
     }
+    
+    /// Creates a new instance with a different store for the specified category
+    /// - Parameters:
+    ///   - store: The configuration store to use
+    ///   - category: The category to assign the store to
+    /// - Returns: A new Configs instance with the updated store mapping
+    func with(store: ConfigStore, for category: ConfigCategory) -> Self {
+        var stores = registry.stores
+        stores[category] = store
+        return Configs(
+            registry: StoreRegistry(stores, fallback: registry.fallbackStore),
+            values: values
+        )
+    }
 
     /// Fetches configuration values only if not already fetched
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

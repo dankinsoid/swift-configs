@@ -23,12 +23,13 @@ public final class StoreRegistry {
     private var didStartListen = false
     private var didStartFetch = false
     private var cancellation: Cancellation?
-    private let fallbackStore: ConfigStore = .inMemory()
+    public let fallbackStore: ConfigStore
     @Locked var didAccessStores = false
     
     /// Initializes with a set of category stores
-    public init(_ stores: [ConfigCategory: ConfigStore]) {
+    public init(_ stores: [ConfigCategory: ConfigStore], fallback: ConfigStore = .inMemory()) {
         _stores = stores
+        self.fallbackStore = fallback
     }
     
     public static func `default`(with custom: [ConfigCategory: ConfigStore]) -> StoreRegistry {
