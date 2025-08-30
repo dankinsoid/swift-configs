@@ -37,7 +37,7 @@ import Foundation
 /// All conforming types are value types. Operations like `with(...)` return new instances
 /// rather than mutating the existing one, ensuring immutable, predictable behavior.
 ///
-/// - Note: Key prefixes are empty by default - add them only when needed for runtime prefixing.
+/// - Note: Key prefixes are empty by default - add them only when needed.
 public protocol ConfigsType {
 
     associatedtype Keys

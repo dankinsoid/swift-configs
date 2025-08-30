@@ -60,111 +60,6 @@ let serverURL = configs.serverURL
 configs.apiToken = "new-token"
 ```
 
-## Namespaces
-
-SwiftConfigs supports namespace-based organization of configuration keys, providing compile-time structure and type safety for logically related keys.
-
-### Defining Namespaces
-
-Group related keys in namespace extensions of `Configs.Keys`:
-
-```swift
-extension Configs.Keys {
-    var security: Security { Security() }
-    
-    struct Security: ConfigNamespaceKeys {
-        var apiToken: RWConfigKey<String?> {
-            RWConfigKey("api-token", in: .secure, default: nil)
-        }
-        
-        var encryptionEnabled: ROConfigKey<Bool> {
-            ROConfigKey("encryption-enabled", in: .secure, default: true)
-        }
-    }
-}
-```
-
-### Nested Namespaces
-
-Create deeper hierarchies by nesting namespace types:
-
-```swift
-extension Configs.Keys {
-    var features: Features { Features() }
-    
-    struct Features: ConfigNamespaceKeys {
-        var auth: Auth { Auth() }
-        var ui: UI { UI() }
-        
-        struct Auth: ConfigNamespaceKeys {
-            var biometricEnabled: RWConfigKey<Bool> {
-                RWConfigKey("biometric-enabled", in: .default, default: false)
-            }
-            
-            var faceIdSupported: ROConfigKey<Bool> {
-                ROConfigKey("faceid-supported", in: .default, default: false)
-            }
-        }
-        
-        struct UI: ConfigNamespaceKeys {
-            var darkModeEnabled: RWConfigKey<Bool> {
-                RWConfigKey("dark-mode", in: .default, default: false)
-            }
-        }
-    }
-}
-```
-
-### Accessing Namespaced Values
-
-Use dot notation for organized, type-safe access:
-
-```swift
-let configs = Configs()
-
-// Read values through namespaces - clean, organized access
-let apiToken = configs.security.apiToken
-let biometricEnabled = configs.features.auth.biometricEnabled
-let darkMode = configs.features.ui.darkModeEnabled
-
-// Write values through namespaces
-configs.security.apiToken = "new-token"
-configs.features.auth.biometricEnabled = true
-
-// Listen to changes in namespaced keys
-let cancellation = configs.onChange(of: \.security.apiToken) { newToken in
-    print("Security token changed: \(newToken ?? "nil")")
-}
-```
-
-### Runtime Key Prefixing (Optional)
-
-Most namespaces don't need runtime prefixing - they're primarily for organization. When needed, add a `keyPrefix`:
-
-```swift
-extension Configs.Keys {
-    struct Environment: ConfigNamespaceKeys {
-        var keyPrefix: String { "env_" }  // Optional runtime prefixing
-        
-        var apiUrl: ROConfigKey<String> {
-            ROConfigKey("api-url", in: .environment, default: "localhost")
-            // Final key name: "env_api-url"
-        }
-    }
-}
-```
-
-### Direct Key Prefixing
-
-Use `key.prefix(_:)` for one-off prefixing:
-
-```swift
-let userKey = RWConfigKey<String>("username", in: .default, default: "")
-let prefixedKey = userKey.prefix("temp_")
-
-let value = configs.get(prefixedKey)  // Reads "temp_username"
-```
-
 ## Configuration Categories
 
 SwiftConfigs organizes configuration data using categories, allowing you to store different types of settings in appropriate backends:
@@ -286,6 +181,79 @@ struct SettingsView: View {
             Button("Increment") {
                 counter += 1
             }
+        }
+    }
+}
+```
+
+## Namespaces
+
+SwiftConfigs supports namespace-based organization of configuration keys, providing compile-time structure and type safety for logically related keys.
+
+### Basic Namespaces
+
+Group related keys in namespace extensions of `Configs.Keys`:
+
+```swift
+extension Configs.Keys {
+    var security: Security { Security() }
+    
+    struct Security: ConfigNamespaceKeys {
+        var apiToken: RWConfigKey<String?> {
+            RWConfigKey("api-token", in: .secure, default: nil)
+        }
+        
+        var encryptionEnabled: ROConfigKey<Bool> {
+            ROConfigKey("encryption-enabled", in: .secure, default: true)
+        }
+    }
+}
+
+// Usage - clean, organized access
+let configs = Configs()
+let apiToken = configs.security.apiToken
+configs.security.encryptionEnabled = false
+
+// Property wrapper usage
+@RWConfig(\.security.apiToken) var token: String?
+@ROConfigState(\.security.encryptionEnabled) var isEncryptionEnabled: Bool
+```
+
+### Nested Namespaces
+
+Create deeper hierarchies by nesting namespace types:
+
+```swift
+extension Configs.Keys {
+    struct Features: ConfigNamespaceKeys {
+        var auth: Auth { Auth() }
+        
+        struct Auth: ConfigNamespaceKeys {
+            var biometricEnabled: RWConfigKey<Bool> {
+                RWConfigKey("biometric-enabled", in: .default, default: false)
+            }
+        }
+    }
+}
+
+// Usage - deep namespace navigation
+let biometricEnabled = configs.features.auth.biometricEnabled
+configs.features.auth.biometricEnabled = true
+```
+
+### Key Prefixing (Optional)
+
+Namespaces are primarily for code organization. But if needed, you can add a `keyPrefix` to automatically prefix all keys in that namespace:
+
+```swift
+extension Configs.Keys {
+
+    struct Environment: ConfigNamespaceKeys {
+        var keyPrefix: String { "env/" }  // Optional key prefixing
+        
+        var apiUrl: ROConfigKey<String> {
+            ROConfigKey("api-url", in: .environment, default: "localhost")
+            // Final key name: "env/api-url"
         }
     }
 }
@@ -583,7 +551,7 @@ Or add it through Xcode:
 6. **Bootstrap the system early** in your app lifecycle before accessing any configuration
 7. **Prefer category-based initialization** (`init(_:in:default:)`) over store-based for most use cases
 8. **Use store-based initialization** (`init(_:store:default:)`) only when you need specific store targeting or before system bootstrap
-9. **Use runtime prefixing sparingly** - only add `keyPrefix` when you need it; most namespaces work fine with the default empty prefix
+9. **Use prefixing sparingly** - only add `keyPrefix` when you need it; most namespaces work fine with the default empty prefix
 10. **Handle migration** using multiplex stores or custom migration logic
 11. **Use property wrappers** for clean SwiftUI and declarative code integration
 12. **Leverage async/await** for remote configuration fetching

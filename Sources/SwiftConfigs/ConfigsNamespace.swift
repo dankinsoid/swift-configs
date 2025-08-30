@@ -24,9 +24,9 @@ import Foundation
 /// }
 /// ```
 ///
-/// ## Runtime Key Prefixing (Optional)
+/// ## Key Prefixing (Optional)
 ///
-/// Optionally, you can add runtime key prefixing by implementing `keyPrefix`:
+/// Optionally, you can add key prefixing by implementing `keyPrefix`:
 ///
 /// ```swift
 /// struct Security: ConfigNamespaceKeys {
@@ -38,13 +38,13 @@ import Foundation
 /// The default `keyPrefix` is empty, emphasizing that organization is the main benefit.
 public protocol ConfigNamespaceKeys {
 
-    /// Optional runtime prefix applied to all keys in this namespace
+    /// Optional prefix applied to all keys in this namespace
     ///
     /// Most namespaces don't need prefixes - they're primarily for compile-time organization.
-    /// Override this property only when you need runtime key prefixing.
+    /// Override this property only when you need key prefixing.
     ///
     /// ```swift
-    /// var keyPrefix: String { "feature/" }  // Optional runtime prefixing
+    /// var keyPrefix: String { "feature/" }  // Optional key prefixing
     /// ```
     ///
     /// - Returns: The prefix string, or empty string (default) for no prefix
