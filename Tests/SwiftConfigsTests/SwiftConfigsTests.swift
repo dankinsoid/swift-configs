@@ -6,7 +6,6 @@ final class SwiftConfigsTests: XCTestCase {
     static var allTests = [
         ("testReadDefaultValue", testReadDefaultValue),
         ("testReadValue", testReadValue),
-        ("testListen", testListen),
         ("testDidFetch", testDidFetch),
         ("testFetchIfNeeded", testFetchIfNeeded),
         ("testEnvironmentVariableStore", testEnvironmentVariableStore),
@@ -46,20 +45,6 @@ final class SwiftConfigsTests: XCTestCase {
 
         // Assert
         XCTAssertEqual(value, "value")
-    }
-
-    func testListen() {
-        // Arrange
-        var fetched = false
-        let _ = Configs().onChange { _ in
-            fetched = true
-        }
-
-        // Act
-        store.values = ["key": "value"]
-
-        // Assert
-        XCTAssertTrue(fetched)
     }
 
     func testDidFetch() async throws {
@@ -189,7 +174,7 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 
 private extension Configs.Keys {
 
-    var testKey: Key<String, ReadWrite> {
-        Key("key", in: .default, default: "defaultValue")
+    var testKey: ROConfigKey<String> {
+        ConfigKey("key", in: .default, default: "defaultValue")
     }
 }

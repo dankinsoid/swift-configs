@@ -10,14 +10,12 @@ public protocol ConfigWrapper<Value> {
     /// The configuration key access type (ReadOnly or ReadWrite)
     associatedtype Access: KeyAccess
 
-    typealias Key = ConfigKey<Value, Access>
-
     /// The configuration management instance
     var configs: Configs { get }
     /// The configuration key defining the value's storage and behavior
-    var key: Key { get }
+    var key: ConfigKey<Value, Access> { get }
     /// Creates a wrapper with the specified key and configuration instance
-    init(_ key: Key, configs: Configs)
+    init(_ key: ConfigKey<Value, Access>, configs: Configs)
 }
 
 public extension ConfigWrapper {
@@ -30,7 +28,7 @@ public extension ConfigWrapper {
     /// - Parameters:
     ///   - key: Key path to the configuration key in the Configs.Keys namespace
     ///   - configs: Configuration instance (uses default system if not specified)
-    init(_ key: KeyPath<Configs.Keys, Key>, configs _: Configs = Configs()) {
+    init(_ key: KeyPath<Configs.Keys, ConfigKey<Value, Access>>, configs _: Configs = Configs()) {
         self.init(Configs.Keys()[keyPath: key], configs: Configs())
     }
 
@@ -114,7 +112,7 @@ public struct ROConfig<Value>: ConfigWrapper {
         self
     }
 
-    public init(_ key: Key, configs: Configs) {
+    public init(_ key: ROConfigKey<Value>, configs: Configs) {
         self.key = key
         self.configs = configs
     }
@@ -164,7 +162,7 @@ public struct RWConfig<Value>: ConfigWrapper {
         self
     }
 
-    public init(_ key: Key, configs: Configs) {
+    public init(_ key: ConfigKey<Value, Access>, configs: Configs) {
         self.key = key
         self.configs = configs
     }
@@ -186,7 +184,7 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         cacheDefaultValue: Bool = false
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: { $0.store(for: category) },
                 as: .stringConvertable,
@@ -212,7 +210,7 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         cacheDefaultValue: Bool = false
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .stringConvertable,
@@ -240,7 +238,7 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         cacheDefaultValue: Bool = false
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .rawRepresentable,
@@ -266,7 +264,7 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         cacheDefaultValue: Bool = false
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .rawRepresentable,
@@ -299,7 +297,7 @@ public extension ConfigWrapper where Value: Codable {
         encoder: JSONEncoder = JSONEncoder()
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .json(decoder: decoder, encoder: encoder),
@@ -330,7 +328,7 @@ public extension ConfigWrapper where Value: Codable {
         encoder: JSONEncoder = JSONEncoder()
     ) {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .json(decoder: decoder, encoder: encoder),
@@ -358,7 +356,7 @@ public extension ConfigWrapper {
         cacheDefaultValue: Bool = false
     ) where Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.stringConvertable),
@@ -384,7 +382,7 @@ public extension ConfigWrapper {
         cacheDefaultValue: Bool = false
     ) where Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.stringConvertable),
@@ -410,7 +408,7 @@ public extension ConfigWrapper {
         cacheDefaultValue: Bool = false
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.rawRepresentable),
@@ -436,7 +434,7 @@ public extension ConfigWrapper {
         cacheDefaultValue: Bool = false
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.rawRepresentable),
@@ -467,7 +465,7 @@ public extension ConfigWrapper {
         encoder: JSONEncoder = JSONEncoder()
     ) where Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),
@@ -498,7 +496,7 @@ public extension ConfigWrapper {
         encoder: JSONEncoder = JSONEncoder()
     ) where Value == T? {
         self.init(
-            Key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),

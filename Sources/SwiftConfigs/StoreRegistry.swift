@@ -1,7 +1,15 @@
 import Foundation
 
+public protocol StoreRegistryType {
+    
+    var stores: [ConfigCategory: ConfigStore] { get }
+    func fetch(completion: @escaping (Error?) -> Void)
+    func onChange(_ observer: @escaping () -> Void) -> Cancellation
+    func store(for category: ConfigCategory?) -> ConfigStore
+}
+
 /// The main configuration store that manages multiple category stores
-public final class StoreRegistry {
+public final class StoreRegistry: StoreRegistryType {
     
     /// Whether any store has completed a fetch operation
     public var hasFetched: Bool {
@@ -62,11 +70,6 @@ public final class StoreRegistry {
         let hasFetched = self.hasFetched
         if !hasFetched, !lock.withReaderLock({ didStartFetch }) {
             fetch { _ in }
-        }
-        defer {
-            if hasFetched {
-                observer()
-            }
         }
         let id = UUID()
         lock.withWriterLockVoid {

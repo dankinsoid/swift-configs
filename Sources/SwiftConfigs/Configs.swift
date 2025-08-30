@@ -34,13 +34,20 @@ import Foundation
 /// try await configs.fetch()
 /// ```
 @dynamicMemberLookup
-public struct Configs {
+public struct Configs: ConfigsType {
 
     /// The store registry coordinating access across multiple configuration stores
     public let registry: StoreRegistry
     
     /// In-memory value overrides for testing and temporary modifications
-    private let values: [String: Any]
+    var values: [String: Any]
+    
+    public var configs: Configs {
+        get { self }
+        set { self = newValue }
+    }
+    
+    public var keyPrefix: String { "" }
 
     /// Creates a configuration instance with a custom store registry
     ///
@@ -51,7 +58,7 @@ public struct Configs {
         self.values = [:]
     }
     
-    private init(registry: StoreRegistry, values: [String: Any]) {
+    init(registry: StoreRegistry, values: [String: Any]) {
         self.registry = registry
         self.values = values
     }
@@ -63,76 +70,15 @@ public struct Configs {
     public init() {
         self.init(registry: ConfigSystem.registry)
     }
+}
 
-    /// Dynamic member lookup for read-only config keys
-    public subscript<Value>(dynamicMember keyPath: KeyPath<Configs.Keys, ConfigKey<Value, ReadOnly>>) -> Value {
-        self.get(keyPath)
-    }
-
-    /// Dynamic member lookup for read-write config keys
-    public subscript<Value>(dynamicMember keyPath: KeyPath<Configs.Keys, ConfigKey<Value, ReadWrite>>) -> Value {
-        get {
-            get(keyPath)
-        }
-        nonmutating set {
-            set(keyPath, newValue)
-        }
-    }
-
-    /// Gets a configuration value using a key path
-    public func get<Value, P: KeyAccess>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>) -> Value {
-        get(Keys()[keyPath: keyPath])
-    }
-
-    /// Gets a configuration value using a config key
-    public func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
-        if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {
-            return result
-        }
-        return key.get(registry: registry)
-    }
-
-    /// Sets a configuration value using a config key
-    public func set<Value>(_ key: ConfigKey<Value, ReadWrite>, _ newValue: Value) {
-        key.set(registry: registry, newValue)
-    }
-
-    /// Sets a configuration value using a key path
-    public func set<Value>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, ReadWrite>>, _ newValue: Value) {
-        let key = Keys()[keyPath: keyPath]
-        set(key, newValue)
-    }
-
-    /// Removes a configuration value using a key path
-    public func remove<Value>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, ReadWrite>>) {
-        let key = Keys()[keyPath: keyPath]
-        remove(key)
-    }
-
-    /// Removes a configuration value using a config key
-    public func remove<Value>(_ key: ConfigKey<Value, ReadWrite>) {
-        key.remove(registry: registry)
-    }
-
-    /// Checks if a configuration value exists using a key path
-    public func exists<Value, P: KeyAccess>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>) -> Bool {
-        let key = Keys()[keyPath: keyPath]
-        return exists(key)
-    }
-
-    /// Checks if a configuration value exists using a config key
-    public func exists<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Bool {
-        if let overwrittenValue = values[key.name] {
-            return overwrittenValue is Value
-        }
-        return key.exists(registry: registry)
-    }
+public extension Configs {
 
     /// Indicates whether at least one fetch operation has been completed
     ///
     /// This can be used to determine if remote configuration values have been loaded
     /// at least once since the application started.
-    public var hasFetched: Bool { registry.hasFetched }
+    var hasFetched: Bool { registry.hasFetched }
 
     /// Fetches the latest configuration values from all stores
     ///
@@ -143,7 +89,7 @@ public struct Configs {
     /// - Throws: Aggregated errors from any stores that fail to fetch
     /// - Note: Individual store failures don't prevent other stores from succeeding
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    public func fetch() async throws {
+    func fetch() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             registry.fetch { error in
                 if let error {
@@ -164,36 +110,10 @@ public struct Configs {
     /// - Parameter listener: Called with an updated Configs instance when changes occur
     /// - Returns: Cancellation token to stop listening for changes
     /// - Note: The listener is called on the main thread
-    public func onChange(_ listener: @escaping (Configs) -> Void) -> Cancellation {
+    func onChange(_ listener: @escaping (Configs) -> Void) -> Cancellation {
         registry.onChange {
             listener(self)
         }
-    }
-}
-
-public extension Configs {
-    /// Overwrites the value of a key.
-    /// - Parameters:
-    ///   - key: The key to overwrite.
-    ///   - value: The value to set.
-    func with<Value, P: KeyAccess>(_ key: KeyPath<Configs.Keys, ConfigKey<Value, P>>, _ value: Value?) -> Self {
-        var values = values
-        values[Keys()[keyPath: key].name] = value
-        return Configs(registry: registry, values: values)
-    }
-    
-    /// Creates a new instance with a different store for the specified category
-    /// - Parameters:
-    ///   - store: The configuration store to use
-    ///   - category: The category to assign the store to
-    /// - Returns: A new Configs instance with the updated store mapping
-    func with(store: ConfigStore, for category: ConfigCategory) -> Self {
-        var stores = registry.stores
-        stores[category] = store
-        return Configs(
-            registry: StoreRegistry(stores, fallback: registry.fallbackStore),
-            values: values
-        )
     }
 
     /// Fetches configuration values only if not already fetched
@@ -201,50 +121,6 @@ public extension Configs {
     func fetchIfNeeded() async throws {
         guard !hasFetched else { return }
         try await fetch()
-    }
-
-    /// Fetches if needed and returns the value for a specific key
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetchIfNeeded<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
-        try await fetchIfNeeded()
-        return get(key)
-    }
-
-    /// Fetches configuration values and returns the value for a specific key
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetch<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
-        try await fetch()
-        return get(key)
-    }
-
-    /// Fetches if needed and returns the value for a specific key path
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetchIfNeeded<Value, P: KeyAccess>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>) async throws -> Value {
-        try await fetchIfNeeded(Keys()[keyPath: keyPath])
-    }
-
-    /// Fetches configuration values and returns the value for a specific key path
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetch<Value, P: KeyAccess>(_ keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>) async throws -> Value {
-        try await fetch(Keys()[keyPath: keyPath])
-    }
-
-    /// Registers a listener for changes to a specific configuration key
-    func onChange<Value, P: KeyAccess>(of key: ConfigKey<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
-        let overriden = values[key.name]
-        return key.onChange(registry: registry) { [overriden] value in
-            if let overriden, let result = overriden as? Value {
-                observer(result)
-                return
-            }
-            observer(value)
-        }
-    }
-
-    /// Registers a listener for changes to a specific configuration key path
-    func onChange<Value, P: KeyAccess>(of keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>, _ observer: @escaping (Value) -> Void) -> Cancellation {
-        let key = Keys()[keyPath: keyPath]
-        return onChange(of: key, observer)
     }
 
     /// Returns an async sequence for configuration changes
@@ -255,23 +131,6 @@ public extension Configs {
                 observer(configs)
             }
         }
-    }
-
-    /// Returns an async sequence for changes to a specific configuration key
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes<Value, P: KeyAccess>(of key: ConfigKey<Value, P>) -> ConfigChangesSequence<Value> {
-        ConfigChangesSequence { observer in
-            self.onChange(of: key) { value in
-                observer(value)
-            }
-        }
-    }
-
-    /// Returns an async sequence for changes to a specific configuration key path
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes<Value, P: KeyAccess>(of keyPath: KeyPath<Configs.Keys, ConfigKey<Value, P>>) -> ConfigChangesSequence<Value> {
-        let key = Keys()[keyPath: keyPath]
-        return changes(of: key)
     }
 }
 

@@ -130,85 +130,73 @@ extension ConfigStore where Self == InfoPlistConfigStore {
 public extension Configs.Keys {
 
     /// App bundle identifier (CFBundleIdentifier)
-    var bundleIdentifier: Key<String, ReadOnly> {
-        Key("CFBundleIdentifier", in: .manifest, default: "unknown.bundle.id")
+    var bundleIdentifier: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleIdentifier", in: .manifest, default: "unknown.bundle.id")
     }
 
     /// App bundle display name (CFBundleName)
-    var bundleName: Key<String, ReadOnly> {
-        Key("CFBundleName", in: .manifest, default: "App")
+    var bundleName: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleName", in: .manifest, default: "App")
     }
 
     /// Executable file name (CFBundleExecutable)
-    var executableName: Key<String, ReadOnly> {
-        Key("CFBundleExecutable", in: .manifest, default: "")
+    var executableName: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleExecutable", in: .manifest, default: "")
     }
 
     /// Build number (CFBundleVersion)
-    var buildNumber: Key<String, ReadOnly> {
-        Key("CFBundleVersion", in: .manifest, default: "0")
+    var buildNumber: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleVersion", in: .manifest, default: "0")
     }
 
     /// Marketing version string (CFBundleShortVersionString)
-    var versionString: Key<String, ReadOnly> {
-        Key("CFBundleShortVersionString", in: .manifest, default: "0.0")
+    var versionString: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleShortVersionString", in: .manifest, default: "0.0")
     }
 
     /// Bundle package type (CFBundlePackageType)
-    var packageType: Key<String, ReadOnly> {
-        Key("CFBundlePackageType", in: .manifest, default: "APPL")
+    var packageType: ConfigKey<String, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundlePackageType", in: .manifest, default: "APPL")
     }
 
     /// User-visible app name (CFBundleDisplayName)
-    var displayName: Key<String?, ReadOnly> {
-        Key("CFBundleDisplayName", in: .manifest, default: nil)
+    var displayName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
+        ConfigKey("CFBundleDisplayName", in: .manifest, default: nil)
     }
 
     /// Minimum OS version required (MinimumOSVersion)
-    var minimumOSVersion: Key<String?, ReadOnly> {
-        Key("MinimumOSVersion", in: .manifest, default: nil)
+    var minimumOSVersion: ConfigKey<String?, SwiftConfigs.ReadOnly> {
+        ConfigKey("MinimumOSVersion", in: .manifest, default: nil)
     }
 
     /// Launch storyboard file name (UILaunchStoryboardName)
-    var launchStoryboardName: Key<String?, ReadOnly> {
-        Key("UILaunchStoryboardName", in: .manifest, default: nil)
+    var launchStoryboardName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
+        ConfigKey("UILaunchStoryboardName", in: .manifest, default: nil)
     }
 
     /// Required device capabilities (UIRequiredDeviceCapabilities)
-    var requiredDeviceCapabilities: Key<[String]?, ReadOnly> {
-        Key("UIRequiredDeviceCapabilities", in: .manifest, default: nil)
+    var requiredDeviceCapabilities: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
+        ConfigKey("UIRequiredDeviceCapabilities", in: .manifest, default: nil)
     }
 
     /// Supported interface orientations for iPhone (UISupportedInterfaceOrientations)
-    var supportedInterfaceOrientations: Key<[String]?, ReadOnly> {
-        Key("UISupportedInterfaceOrientations", in: .manifest, default: nil)
+    var supportedInterfaceOrientations: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
+        ConfigKey("UISupportedInterfaceOrientations", in: .manifest, default: nil)
     }
 
     /// Supported interface orientations for iPad (UISupportedInterfaceOrientations~ipad)
-    var supportedInterfaceOrientationsIpad: Key<[String]?, ReadOnly> {
-        Key("UISupportedInterfaceOrientations~ipad", in: .manifest, default: nil)
+    var supportedInterfaceOrientationsIpad: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
+        ConfigKey("UISupportedInterfaceOrientations~ipad", in: .manifest, default: nil)
     }
 
     /// Main storyboard file name (UIMainStoryboardFile)
-    var mainStoryboardFile: Key<String?, ReadOnly> {
-        Key("UIMainStoryboardFile", in: .manifest, default: nil)
+    var mainStoryboardFile: ConfigKey<String?, SwiftConfigs.ReadOnly> {
+        ConfigKey("UIMainStoryboardFile", in: .manifest, default: nil)
     }
 
     /// Application category type (LSApplicationCategoryType)
-    var applicationCategory: Key<String?, ReadOnly> {
-        Key("LSApplicationCategoryType", in: .manifest, default: nil)
+    var applicationCategory: ConfigKey<String?, SwiftConfigs.ReadOnly> {
+        ConfigKey("LSApplicationCategoryType", in: .manifest, default: nil)
     }
-}
-
-extension ConfigKey<String?, ReadOnly> {
-    
-}
-
-func tt<T>(_ kp: ReferenceWritableKeyPath<Configs, T>) {
-    
-}
-
-func ttt() {
-    
 }
 #endif

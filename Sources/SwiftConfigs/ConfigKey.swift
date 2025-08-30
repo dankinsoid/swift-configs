@@ -29,11 +29,11 @@ public enum ReadWrite: KeyAccess {
 /// read-only or read-write permissions at compile time.
 public struct ConfigKey<Value, Access: KeyAccess> {
     public let name: String
-    private let _get: (StoreRegistry) -> Value
-    private let _set: (StoreRegistry, Value) -> Void
-    private let _remove: (StoreRegistry) throws -> Void
-    private let _exists: (StoreRegistry) -> Bool
-    private let _listen: (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
+    private let _get: (StoreRegistryType) -> Value
+    private let _set: (StoreRegistryType, Value) -> Void
+    private let _remove: (StoreRegistryType) throws -> Void
+    private let _exists: (StoreRegistryType) -> Bool
+    private let _listen: (StoreRegistryType, @escaping (Value) -> Void) -> Cancellation
 
     /// Creates a configuration key with custom behavior
     ///
@@ -48,11 +48,11 @@ public struct ConfigKey<Value, Access: KeyAccess> {
     /// - Note: Most users should use the convenience initializers instead of this low-level constructor.
     public init(
         _ key: String,
-        get: @escaping (StoreRegistry) -> Value,
-        set: @escaping (StoreRegistry, Value) -> Void,
-        remove: @escaping (StoreRegistry) throws -> Void,
-        exists: @escaping (StoreRegistry) -> Bool,
-        onChange: @escaping (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
+        get: @escaping (StoreRegistryType) -> Value,
+        set: @escaping (StoreRegistryType, Value) -> Void,
+        remove: @escaping (StoreRegistryType) throws -> Void,
+        exists: @escaping (StoreRegistryType) -> Bool,
+        onChange: @escaping (StoreRegistryType, @escaping (Value) -> Void) -> Cancellation
     ) {
         name = key
         _get = get
@@ -62,26 +62,26 @@ public struct ConfigKey<Value, Access: KeyAccess> {
         _listen = onChange
     }
 
-    public func get(registry: StoreRegistry) -> Value {
+    public func get(registry: StoreRegistryType) -> Value {
         _get(registry)
     }
 
-    public func set(registry: StoreRegistry, _ newValue: Value) {
+    public func set(registry: StoreRegistryType, _ newValue: Value) {
         _set(registry, newValue)
     }
 
     /// Removes the stored value for this key
     ///
     /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
-    public func remove(registry: StoreRegistry) {
+    public func remove(registry: StoreRegistryType) {
         try? _remove(registry)
     }
 
-    public func exists(registry: StoreRegistry) -> Bool {
+    public func exists(registry: StoreRegistryType) -> Bool {
         _exists(registry)
     }
 
-    public func onChange(registry: StoreRegistry, _ observer: @escaping (Value) -> Void) -> Cancellation {
+    public func onChange(registry: StoreRegistryType, _ observer: @escaping (Value) -> Void) -> Cancellation {
         _listen(registry, observer)
     }
 
@@ -129,7 +129,9 @@ public typealias RWKey<Value> = ConfigKey<Value, ReadWrite>
 
 public extension Configs {
 
-    struct Keys {
+    var keys: Keys { Keys() }
+
+    struct Keys: ConfigNamespaceKeys {
 
         public init() {}
 
@@ -159,7 +161,7 @@ public extension ConfigKey {
 
     init(
         _ name: String,
-        store: @escaping (StoreRegistry) -> ConfigStore,
+        store: @escaping (StoreRegistryType) -> ConfigStore,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool
