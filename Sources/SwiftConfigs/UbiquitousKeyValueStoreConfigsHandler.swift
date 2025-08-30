@@ -39,8 +39,8 @@
     /// ```swift
     /// // Use for user preferences that should sync across devices
     /// extension Configs.Keys {
-    ///     static let preferredTheme = RWKey("theme", in: .icloud, default: "system")
-    ///     static let notificationsEnabled = RWKey("notifications", in: .icloud, default: true)
+    ///     static let preferredTheme = RWConfigKey("theme", in: .icloud, default: "system")
+    ///     static let notificationsEnabled = RWConfigKey("notifications", in: .icloud, default: true)
     /// }
     /// ```
     @available(iOS 5.0, macOS 10.7, tvOS 9.0, watchOS 2.0, *)

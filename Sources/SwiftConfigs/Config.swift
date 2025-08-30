@@ -10,7 +10,7 @@ public protocol ConfigWrapper<Value> {
     /// The configuration key access type (ReadOnly or ReadWrite)
     associatedtype Access: KeyAccess
 
-    typealias Key = Configs.Keys.Key<Value, Access>
+    typealias Key = ConfigKey<Value, Access>
 
     /// The configuration management instance
     var configs: Configs { get }
@@ -49,7 +49,7 @@ public extension ConfigWrapper {
     }
 }
 
-public extension ConfigWrapper where Access == Configs.Keys.ReadOnly {
+public extension ConfigWrapper where Access == ReadOnly {
 
     /// The current configuration value
     var value: Value {
@@ -58,7 +58,7 @@ public extension ConfigWrapper where Access == Configs.Keys.ReadOnly {
 }
 
 
-public extension ConfigWrapper where Access == Configs.Keys.ReadWrite {
+public extension ConfigWrapper where Access == ReadWrite {
 
     /// The current configuration value
     var value: Value {
@@ -99,7 +99,7 @@ public extension ConfigWrapper where Access == Configs.Keys.ReadWrite {
 @propertyWrapper
 public struct ROConfig<Value>: ConfigWrapper {
     public let configs: Configs
-    public let key: Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
+    public let key: ConfigKey<Value, ReadOnly>
 
     /// The current configuration value
     ///
@@ -144,7 +144,7 @@ public struct ROConfig<Value>: ConfigWrapper {
 @propertyWrapper
 public struct RWConfig<Value>: ConfigWrapper {
     public let configs: Configs
-    public let key: Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
+    public let key: ConfigKey<Value, ReadWrite>
 
     /// The configuration value with read and write access
     ///

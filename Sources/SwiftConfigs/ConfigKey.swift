@@ -8,127 +8,155 @@ public protocol KeyAccess {
     static var isWritable: Bool { get }
 }
 
-public typealias ROKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadOnly>
-public typealias RWKey<Value> = Configs.Keys.Key<Value, Configs.Keys.ReadWrite>
+/// Read-only permission for configuration keys
+///
+/// Keys with this permission cannot be modified through the configuration system.
+public enum ReadOnly: KeyAccess {
+    public static var isWritable: Bool { false }
+}
+
+/// Read-write permission for configuration keys
+///
+/// Keys with this permission support both reading and writing operations.
+public enum ReadWrite: KeyAccess {
+    public static var isWritable: Bool { true }
+}
+
+/// Configuration key with specified value type and access permissions
+///
+/// Encapsulates all operations for a configuration value, including reading, writing,
+/// existence checking, and change observation. The `Access` type parameter enforces
+/// read-only or read-write permissions at compile time.
+public struct ConfigKey<Value, Access: KeyAccess> {
+    public let name: String
+    private let _get: (StoreRegistry) -> Value
+    private let _set: (StoreRegistry, Value) -> Void
+    private let _remove: (StoreRegistry) throws -> Void
+    private let _exists: (StoreRegistry) -> Bool
+    private let _listen: (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
+
+    /// Creates a configuration key with custom behavior
+    ///
+    /// - Parameters:
+    ///   - key: The unique identifier for this configuration key
+    ///   - get: Closure to retrieve the current value
+    ///   - set: Closure to store a new value
+    ///   - delete: Closure to remove the stored value
+    ///   - exists: Closure to check if a value exists
+    ///   - onChange: Closure to observe value changes
+    ///
+    /// - Note: Most users should use the convenience initializers instead of this low-level constructor.
+    public init(
+        _ key: String,
+        get: @escaping (StoreRegistry) -> Value,
+        set: @escaping (StoreRegistry, Value) -> Void,
+        remove: @escaping (StoreRegistry) throws -> Void,
+        exists: @escaping (StoreRegistry) -> Bool,
+        onChange: @escaping (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
+    ) {
+        name = key
+        _get = get
+        _set = set
+        _remove = remove
+        _exists = exists
+        _listen = onChange
+    }
+
+    public func get(registry: StoreRegistry) -> Value {
+        _get(registry)
+    }
+
+    public func set(registry: StoreRegistry, _ newValue: Value) {
+        _set(registry, newValue)
+    }
+
+    /// Removes the stored value for this key
+    ///
+    /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
+    public func remove(registry: StoreRegistry) {
+        try? _remove(registry)
+    }
+
+    public func exists(registry: StoreRegistry) -> Bool {
+        _exists(registry)
+    }
+
+    public func onChange(registry: StoreRegistry, _ observer: @escaping (Value) -> Void) -> Cancellation {
+        _listen(registry, observer)
+    }
+
+    /// Transforms this key to work with a different value type
+    ///
+    /// - Parameters:
+    ///   - transform: Function to convert from this key's value type to the target type
+    ///   - reverseTransform: Function to convert from the target type back to this key's value type
+    /// - Returns: A new key that operates on the transformed value type
+    /// - Note: Both transform functions must be pure and reversible for consistent behavior.
+    public func map<T>(
+        _ transform: @escaping (Value) -> T,
+        _ reverseTransform: @escaping (T) -> Value
+    ) -> ConfigKey<T, Access> {
+        ConfigKey<T, Access>(
+            name,
+            get: { registry in
+                transform(self.get(registry: registry))
+            },
+            set: { registry, newValue in
+                self.set(registry: registry, reverseTransform(newValue))
+            },
+            remove: { registry in
+                self.remove(registry: registry)
+            },
+            exists: { registry in
+                self.exists(registry: registry)
+            },
+            onChange: { registry, observer in
+                self.onChange(registry: registry) { newValue in
+                    observer(transform(newValue))
+                }
+            }
+        )
+    }
+}
+
+public typealias ROConfigKey<Value> = ConfigKey<Value, ReadOnly>
+public typealias RWConfigKey<Value> = ConfigKey<Value, ReadWrite>
+
+@available(*, deprecated, renamed: "ROConfigKey")
+public typealias ROKey<Value> = ConfigKey<Value, ReadOnly>
+@available(*, deprecated, renamed: "RWConfigKey")
+public typealias RWKey<Value> = ConfigKey<Value, ReadWrite>
 
 public extension Configs {
+
     struct Keys {
+
         public init() {}
 
         /// Read-only permission for configuration keys
         ///
         /// Keys with this permission cannot be modified through the configuration system.
-        public enum ReadOnly: KeyAccess {
-            public static var isWritable: Bool { false }
-        }
+        @available(*, deprecated, renamed: "ReadOnly")
+        public typealias ReadOnly = SwiftConfigs.ReadOnly
 
         /// Read-write permission for configuration keys
         ///
         /// Keys with this permission support both reading and writing operations.
-        public enum ReadWrite: KeyAccess {
-            public static var isWritable: Bool { true }
-        }
-
+        @available(*, deprecated, renamed: "ReadWrite")
+        public typealias ReadWrite = SwiftConfigs.ReadWrite
+    
         /// Configuration key with specified value type and access permissions
         ///
         /// Encapsulates all operations for a configuration value, including reading, writing,
         /// existence checking, and change observation. The `Access` type parameter enforces
         /// read-only or read-write permissions at compile time.
-        public struct Key<Value, Access: KeyAccess> {
-            public let name: String
-            private let _get: (StoreRegistry) -> Value
-            private let _set: (StoreRegistry, Value) -> Void
-            private let _remove: (StoreRegistry) throws -> Void
-            private let _exists: (StoreRegistry) -> Bool
-            private let _listen: (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
-
-            /// Creates a configuration key with custom behavior
-            ///
-            /// - Parameters:
-            ///   - key: The unique identifier for this configuration key
-            ///   - get: Closure to retrieve the current value
-            ///   - set: Closure to store a new value
-            ///   - delete: Closure to remove the stored value
-            ///   - exists: Closure to check if a value exists
-            ///   - onChange: Closure to observe value changes
-            ///
-            /// - Note: Most users should use the convenience initializers instead of this low-level constructor.
-            public init(
-                _ key: String,
-                get: @escaping (StoreRegistry) -> Value,
-                set: @escaping (StoreRegistry, Value) -> Void,
-                remove: @escaping (StoreRegistry) throws -> Void,
-                exists: @escaping (StoreRegistry) -> Bool,
-                onChange: @escaping (StoreRegistry, @escaping (Value) -> Void) -> Cancellation
-            ) {
-                name = key
-                _get = get
-                _set = set
-                _remove = remove
-                _exists = exists
-                _listen = onChange
-            }
-
-            public func get(registry: StoreRegistry) -> Value {
-                _get(registry)
-            }
-
-            public func set(registry: StoreRegistry, _ newValue: Value) {
-                _set(registry, newValue)
-            }
-
-            /// Removes the stored value for this key
-            ///
-            /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
-            public func remove(registry: StoreRegistry) {
-                try? _remove(registry)
-            }
-
-            public func exists(registry: StoreRegistry) -> Bool {
-                _exists(registry)
-            }
-
-            public func onChange(registry: StoreRegistry, _ observer: @escaping (Value) -> Void) -> Cancellation {
-                _listen(registry, observer)
-            }
-
-            /// Transforms this key to work with a different value type
-            ///
-            /// - Parameters:
-            ///   - transform: Function to convert from this key's value type to the target type
-            ///   - reverseTransform: Function to convert from the target type back to this key's value type
-            /// - Returns: A new key that operates on the transformed value type
-            /// - Note: Both transform functions must be pure and reversible for consistent behavior.
-            public func map<T>(
-                _ transform: @escaping (Value) -> T,
-                _ reverseTransform: @escaping (T) -> Value
-            ) -> Configs.Keys.Key<T, Access> {
-                Configs.Keys.Key<T, Access>(
-                    name,
-                    get: { registry in
-                        transform(self.get(registry: registry))
-                    },
-                    set: { registry, newValue in
-                        self.set(registry: registry, reverseTransform(newValue))
-                    },
-                    remove: { registry in
-                        self.remove(registry: registry)
-                    },
-                    exists: { registry in
-                        self.exists(registry: registry)
-                    },
-                    onChange: { registry, observer in
-                        self.onChange(registry: registry) { newValue in
-                            observer(transform(newValue))
-                        }
-                    }
-                )
-            }
-        }
+        @available(*, deprecated, renamed: "ConfigKey")
+        public typealias Key<Value, Access: KeyAccess> = ConfigKey<Value, Access>
     }
 }
 
-public extension Configs.Keys.Key {
+public extension ConfigKey {
+
     init(
         _ name: String,
         store: @escaping (StoreRegistry) -> ConfigStore,
@@ -539,5 +567,5 @@ public extension Configs.Keys.Key {
 
 #if compiler(>=5.6)
     extension Configs.Keys: Sendable {}
-    extension Configs.Keys.Key: @unchecked Sendable {}
+    extension ConfigKey: @unchecked Sendable {}
 #endif

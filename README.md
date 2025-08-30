@@ -28,16 +28,16 @@ import SwiftConfigs
 ```swift
 public extension Configs.Keys {
     
-    var apiToken: RWKey<String?> {
-        RWKey("api-token", in: .secure, default: nil)
+    var apiToken: RWConfigKey<String?> {
+        RWConfigKey("api-token", in: .secure, default: nil)
     }
     
-    var userID: ROKey<UUID> { 
-        ROKey("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
+    var userID: ROConfigKey<UUID> { 
+        ROConfigKey("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
     }
     
-    var serverURL: ROKey<String> { 
-        ROKey("SERVER_URL", in: .environment, default: "https://api.example.com")
+    var serverURL: ROConfigKey<String> { 
+        ROConfigKey("SERVER_URL", in: .environment, default: "https://api.example.com")
     }
 }
 ```
@@ -56,7 +56,7 @@ let userID = configs.userID
 let token = configs.apiToken
 let serverURL = configs.serverURL
 
-// Write values (for RWKey only)
+// Write values (for RWConfigKey only)
 configs.apiToken = "new-token"
 ```
 
@@ -295,36 +295,36 @@ SwiftConfigs automatically handles common types:
 public extension Configs.Keys {
     
     // String-convertible types
-    var count: ROKey<Int> { 
-        ROKey("count", in: .default, default: 0)
+    var count: ROConfigKey<Int> { 
+        ROConfigKey("count", in: .default, default: 0)
     }
     
-    var rate: ROKey<Double> {
-        ROKey("rate", in: .default, default: 1.0)
+    var rate: ROConfigKey<Double> {
+        ROConfigKey("rate", in: .default, default: 1.0)
     }
     
     // Enum types
-    var theme: ROKey<Theme> { 
-        ROKey("theme", in: .default, default: .light)
+    var theme: ROConfigKey<Theme> { 
+        ROConfigKey("theme", in: .default, default: .light)
     }
     
     // Codable types (stored as JSON)
-    var settings: ROKey<AppSettings> {
-        ROKey("settings", in: .default, default: AppSettings())
+    var settings: ROConfigKey<AppSettings> {
+        ROConfigKey("settings", in: .default, default: AppSettings())
     }
     
     // Optional types
-    var optionalValue: ROKey<String?> {
-        ROKey("optional", in: .default, default: nil)
+    var optionalValue: ROConfigKey<String?> {
+        ROConfigKey("optional", in: .default, default: nil)
     }
     
     // Using specific stores when needed
-    var tempSetting: RWKey<String> {
-        RWKey("temp", store: .inMemory, default: "temp-value")
+    var tempSetting: RWConfigKey<String> {
+        RWConfigKey("temp", store: .inMemory, default: "temp-value")
     }
     
-    var secureToken: RWKey<String?> {
-        RWKey("secure-token", store: .keychain, default: nil)
+    var secureToken: RWConfigKey<String?> {
+        RWConfigKey("secure-token", store: .keychain, default: nil)
     }
 }
 ```
@@ -337,12 +337,12 @@ Handle configuration schema changes gracefully:
 public extension Configs.Keys {
     
     // Migrate from old boolean to new enum
-    var notificationStyle: ROKey<NotificationStyle> {
-        ROKey("notification-style", in: .default, default: .none)
+    var notificationStyle: ROConfigKey<NotificationStyle> {
+        ROConfigKey("notification-style", in: .default, default: .none)
     }
     
-    private var oldNotificationsEnabled: ROKey<Bool> {
-        ROKey("notifications-enabled", in: .default, default: false)
+    private var oldNotificationsEnabled: ROConfigKey<Bool> {
+        ROConfigKey("notifications-enabled", in: .default, default: false)
     }
     
     // Custom migration using multiplex stores can be done at bootstrap level:
@@ -470,10 +470,10 @@ Or add it through Xcode:
 
 ## Best Practices
 
-1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using `ROKey`/`RWKey` type aliases
+1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using `ROConfigKey`/`RWConfigKey` type aliases
 2. **Use appropriate categories** for different security and persistence needs
 3. **Provide sensible defaults** for all configuration keys
-4. **Use read-only keys (`ROKey`)** when values shouldn't be modified at runtime
+4. **Use read-only keys (`ROConfigKey`)** when values shouldn't be modified at runtime
 5. **Bootstrap the system early** in your app lifecycle before accessing any configuration
 6. **Prefer category-based initialization** (`init(_:in:default:)`) over store-based for most use cases
 7. **Use store-based initialization** (`init(_:store:default:)`) only when you need specific store targeting or before system bootstrap

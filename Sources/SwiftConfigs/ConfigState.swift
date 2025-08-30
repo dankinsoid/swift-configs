@@ -16,11 +16,11 @@ public struct ROConfigState<Value>: DynamicProperty, ConfigWrapper {
         self
     }
 
-    public let key: ROKey<Value>
+    public let key: ROConfigKey<Value>
     public let configs: Configs
     @StateObject private var observer: ConfigObserver<Value>
 
-    public init(_ key: ROKey<Value>, configs: Configs) {
+    public init(_ key: ROConfigKey<Value>, configs: Configs) {
         self.key = key
         self.configs = configs
         _observer = StateObject(wrappedValue: ConfigObserver(configs: configs, key: key))
@@ -43,12 +43,12 @@ public struct RWConfigState<Value>: DynamicProperty, ConfigWrapper {
         self
     }
 
-    public let key: RWKey<Value>
+    public let key: RWConfigKey<Value>
     public let configs: Configs
 
     @StateObject private var observer: ConfigObserver<Value>
 
-    public init(_ key: RWKey<Value>, configs: Configs) {
+    public init(_ key: RWConfigKey<Value>, configs: Configs) {
         self.key = key
         self.configs = configs
         _observer = StateObject(wrappedValue: ConfigObserver(configs: configs, key: key))
@@ -62,11 +62,11 @@ private final class ConfigObserver<Value>: ObservableObject {
     private var cancellation: Cancellation?
     @Published var updater = false
     
-    init<Access>(configs: Configs, key: Configs.Keys.Key<Value, Access>) {
+    init<Access>(configs: Configs, key: ConfigKey<Value, Access>) {
         startObservingIfNeeded(configs: configs, key: key)
     }
 
-    private func startObservingIfNeeded<Access>(configs: Configs, key: Configs.Keys.Key<Value, Access>) {
+    private func startObservingIfNeeded<Access>(configs: Configs, key: ConfigKey<Value, Access>) {
         guard cancellation == nil else { return }
         cancellation = configs.onChange(of: key) { @MainActor [weak self] newValue in
             self?.updater.toggle()

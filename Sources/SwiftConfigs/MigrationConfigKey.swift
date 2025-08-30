@@ -1,6 +1,6 @@
 import Foundation
 
-extension Configs.Keys.Key {
+extension ConfigKey {
 
     /// Creates a migration key that handles transitioning from an old key to a new one
     /// - Parameters:
@@ -9,7 +9,7 @@ extension Configs.Keys.Key {
     ///   - firstReadPolicy: Policy for what to do on first read of old value
     ///   - migrate: Function to transform the old value to the new value type
     public static func migration<OldValue, OldP: KeyAccess>(
-        from oldKey: Configs.Keys.Key<OldValue, OldP>,
+        from oldKey: ConfigKey<OldValue, OldP>,
         to newKey: Self,
         firstReadPolicy: MigrationFirstReadPolicy = .default,
         migrate: @escaping (OldValue) -> Value
@@ -41,7 +41,7 @@ extension Configs.Keys.Key {
 
     /// Creates a migration key using key paths
     public static func migration<OldValue, OldP: KeyAccess>(
-        from oldKey: KeyPath<Configs.Keys, Configs.Keys.Key<OldValue, OldP>>,
+        from oldKey: KeyPath<Configs.Keys, ConfigKey<OldValue, OldP>>,
         to newKey: KeyPath<Configs.Keys, Self>,
         firstReadPolicy: MigrationFirstReadPolicy = .default,
         migrate: @escaping (OldValue) -> Value
@@ -51,7 +51,7 @@ extension Configs.Keys.Key {
     
     /// Creates a migration key for same-type values (no transformation needed)
     public static func migration<OldP: KeyAccess>(
-        from oldKey: Configs.Keys.Key<Value, OldP>,
+        from oldKey: ConfigKey<Value, OldP>,
         to newKey: Self,
         firstReadPolicy: MigrationFirstReadPolicy = .default
     ) -> Self {
@@ -60,7 +60,7 @@ extension Configs.Keys.Key {
     
     /// Creates a migration key using key paths for same-type values
     public static func migration<OldP: KeyAccess>(
-        from oldKey: KeyPath<Configs.Keys, Configs.Keys.Key<Value, OldP>>,
+        from oldKey: KeyPath<Configs.Keys, ConfigKey<Value, OldP>>,
         to newKey: KeyPath<Configs.Keys, Self>,
         firstReadPolicy: MigrationFirstReadPolicy = .default
     ) -> Self {

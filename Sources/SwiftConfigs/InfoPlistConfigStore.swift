@@ -199,4 +199,16 @@ public extension Configs.Keys {
         Key("LSApplicationCategoryType", in: .manifest, default: nil)
     }
 }
+
+extension ConfigKey<String?, ReadOnly> {
+    
+}
+
+func tt<T>(_ kp: ReferenceWritableKeyPath<Configs, T>) {
+    
+}
+
+func ttt() {
+    
+}
 #endif
