@@ -185,11 +185,11 @@ final class SwiftConfigsTests: XCTestCase {
         XCTAssertEqual(normalSetting, "normal-value")
         
         // Test that keyPrefix is correctly applied when reading values
-        let securityNamespace = configs.security
+        let securityNamespace = configs.keys.security
         XCTAssertEqual(securityNamespace.keyPrefix, "security.")
         
         // Test direct key access (this will use the prefixed key to read from store)
-        let directApiToken = securityNamespace.apiToken
+        let directApiToken = configs.security.apiToken
         XCTAssertEqual(directApiToken, "secret-token")
     }
 
@@ -214,9 +214,9 @@ final class SwiftConfigsTests: XCTestCase {
         let configs = Configs()
         
         // Act: Get key prefixes at different levels
-        let rootPrefix = configs.keyPrefix
-        let securityPrefix = configs.security.keyPrefix
-        let authPrefix = configs.security.auth.keyPrefix
+        let rootPrefix = configs.keys.keyPrefix
+        let securityPrefix = configs.keys.security.keyPrefix
+        let authPrefix = configs.keys.security.auth.keyPrefix
         
         // Assert: Prefixes should concatenate correctly
         XCTAssertEqual(rootPrefix, "")
@@ -239,9 +239,8 @@ final class SwiftConfigsTests: XCTestCase {
         XCTAssertEqual(updatedNamespace.apiToken, "namespace-override")
         
         // Method 2: Create override using root configs with the actual prefixed key
-        let securityKey = SecurityNamespace().apiToken
-        let prefixedKey = securityKey.prefix("security.")  // Manual prefix for root-level override
-        let updatedConfigs = configs.with(prefixedKey, "root-override")
+        let securityKey = configs.keys.security.apiToken
+        let updatedConfigs = configs.with(securityKey, "root-override")
         XCTAssertEqual(updatedConfigs.security.apiToken, "root-override")
         
         // Original configs should still read from store
@@ -259,7 +258,7 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 }
 
 private extension Configs.Keys {
-
+    
     var testKey: ROConfigKey<String> {
         key("key", in: .default, default: "defaultValue")
     }
@@ -269,31 +268,34 @@ private extension Configs.Keys {
     }
     
     var security: SecurityNamespace { SecurityNamespace() }
-}
-
-private struct SecurityNamespace: ConfigNamespaceKeys {
-    var keyPrefix: String { "security." }
     
-    var apiToken: RWConfigKey<String> {
-        key("api-token", in: .default, default: "default-token")
+    struct SecurityNamespace: ConfigNamespaceKeys {
+        
+        typealias Parent = Configs.Keys
+        static var keyPrefix: String { "security." }
+        
+        var apiToken: RWConfigKey<String> {
+            key("api-token", in: .default, default: "default-token")
+        }
+        
+        var encryptionEnabled: ROConfigKey<Bool> {
+            key("encryption-enabled", in: .default, default: false)
+        }
+        
+        var auth: AuthNamespace { AuthNamespace() }
     }
     
-    var encryptionEnabled: ROConfigKey<Bool> {
-        key("encryption-enabled", in: .default, default: false)
-    }
-    
-    var auth: AuthNamespace { AuthNamespace() }
-}
-
-private struct AuthNamespace: ConfigNamespaceKeys {
-
-    var keyPrefix: String { "auth." }
-
-    var jwtSecret: ROConfigKey<String> {
-        key("jwt-secret", in: .default, default: "default-secret")
-    }
-
-    var timeout: ROConfigKey<Int> {
-        key("timeout", in: .default, default: 30)
+    struct AuthNamespace: ConfigNamespaceKeys {
+        
+        typealias Parent = SecurityNamespace
+        static var keyPrefix: String { "auth." }
+        
+        var jwtSecret: ROConfigKey<String> {
+            key("jwt-secret", in: .default, default: "default-secret")
+        }
+        
+        var timeout: ROConfigKey<Int> {
+            key("timeout", in: .default, default: 30)
+        }
     }
 }

@@ -133,6 +133,8 @@ public extension Configs {
     var keys: Keys { Keys() }
 
     struct Keys: ConfigNamespaceKeys {
+        
+        public typealias Parent = Never
 
         public init() {}
 

@@ -42,7 +42,6 @@ public protocol ConfigsType {
 
     associatedtype Keys
     var keys: Keys { get }
-    var keyPrefix: String { get }
     var configs: Configs { get set }
 }
 
@@ -99,7 +98,6 @@ public extension ConfigsType {
     
     /// Gets a configuration value using a config key
     func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
-        let key = transform(key: key)
         if let overwrittenValue = configs.values[key.name], let result = overwrittenValue as? Value {
             return result
         }
@@ -108,7 +106,7 @@ public extension ConfigsType {
     
     /// Sets a configuration value using a config key
     @inlinable func set<Value>(_ key: ConfigKey<Value, ReadWrite>, _ newValue: Value) {
-        transform(key: key).set(registry: configs.registry, newValue)
+        key.set(registry: configs.registry, newValue)
     }
     
     /// Sets a configuration value using a key path
@@ -125,7 +123,7 @@ public extension ConfigsType {
     
     /// Removes a configuration value using a config key
     @inlinable func remove<Value>(_ key: ConfigKey<Value, ReadWrite>) {
-        transform(key: key).remove(registry: configs.registry)
+        key.remove(registry: configs.registry)
     }
     
     /// Checks if a configuration value exists using a key path
@@ -139,7 +137,7 @@ public extension ConfigsType {
         if let overwrittenValue = configs.values[key.name] {
             return overwrittenValue is Value
         }
-        return transform(key: key).exists(registry: configs.registry)
+        return key.exists(registry: configs.registry)
     }
 
     /// Creates a new instance with an overridden configuration value
@@ -160,7 +158,7 @@ public extension ConfigsType {
     /// - Note: This is a value type operation; the original instance remains unchanged
     func with<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>, _ value: Value?) -> Self {
         var result = self
-        result.configs.values[transform(key: key).name] = value
+        result.configs.values[key.name] = value
         return result
     }
 
@@ -216,7 +214,6 @@ public extension ConfigsType {
     
     /// Registers a listener for changes to a specific configuration key
     func onChange<Value, P: KeyAccess>(of key: ConfigKey<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
-        let key = transform(key: key)
         let overriden = configs.values[key.name]
         return key.onChange(registry: configs.registry) { [overriden] value in
             if let overriden, let result = overriden as? Value {
@@ -249,16 +246,4 @@ public extension ConfigsType {
         let key = keys[keyPath: keyPath]
         return changes(of: key)
     }
-}
-
-extension ConfigsType {
-
-    @usableFromInline
-    func transform<Value, Access>(key: ConfigKey<Value, Access>) -> ConfigKey<Value, Access> {
-         if keyPrefix.isEmpty {
-             return key
-         } else {
-             return key.prefix(keyPrefix)
-         }
-     }
 }

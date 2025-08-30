@@ -20,8 +20,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationFromOldToNewKey_WhenOnlyOldExists() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -45,8 +45,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationReturnsNewValue_WhenBothKeysExist() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         store.set("new_value", for: newKey)
         
@@ -70,8 +70,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationReturnsDefaultValue_WhenNeitherKeyExists() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         
         let migrationKey = RWConfigKey<String>.migration(
             from: oldKey,
@@ -92,8 +92,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationPolicy_WriteToNewOnly() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -115,8 +115,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationPolicy_RemoveOldOnly() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -138,8 +138,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationPolicy_NoAction() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -164,8 +164,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationWithTypeTransformation() {
         // Arrange
-        let oldBoolKey = TestKeys().oldBoolKey
-        let newStringKey = TestKeys().newStringKey
+        let oldBoolKey = Configs.Keys().test.oldBoolKey
+        let newStringKey = Configs.Keys().test.newStringKey
         store.set(true, for: oldBoolKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -187,8 +187,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationWithSameType() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().anotherStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.anotherStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -210,7 +210,7 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationWithKeyPaths() {
         // Arrange
-        let testKeys = TestKeys()
+        let testKeys = Configs.Keys().test
         store.set("old_value", for: testKeys.oldStringKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -228,7 +228,7 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testSameTypeMigrationWithKeyPaths() {
         // Arrange
-        let testKeys = TestKeys()
+        let testKeys = Configs.Keys().test
         store.set("old_value", for: testKeys.oldStringKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -248,8 +248,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationKeySet() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -268,8 +268,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationKeyExists() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         
         let migrationKey = RWConfigKey<String>.migration(
             from: oldKey,
@@ -296,8 +296,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationKeyRemove() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         store.set("new_value", for: newKey)
         
@@ -318,7 +318,7 @@ final class MigrationConfigKeyTests: XCTestCase {
     func testMigrationKeyRemoveWhenOldKeyRemovalFails() {
         // Arrange - Create a mock store that throws on delete for specific key
         let throwingStore = ThrowingRemoveStore()
-        let newKey = TestKeys().newStringKey
+        let newKey = Configs.Keys().test.newStringKey
         
         ConfigSystem.bootstrap([.default: throwingStore]) { _ in }
         defer { ConfigSystem.bootstrap([.default: store]) { _ in } }
@@ -368,7 +368,7 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationInConfigsInstance() {
         // Arrange
-        let testKeys = TestKeys()
+        let testKeys = Configs.Keys().test
         store.set("old_value", for: testKeys.oldStringKey)
         
         // Act
@@ -383,8 +383,8 @@ final class MigrationConfigKeyTests: XCTestCase {
     
     func testMigrationWithListening() {
         // Arrange
-        let oldKey = TestKeys().oldStringKey
-        let newKey = TestKeys().newStringKey
+        let oldKey = Configs.Keys().test.oldStringKey
+        let newKey = Configs.Keys().test.newStringKey
         store.set("old_value", for: oldKey)
         
         let migrationKey = RWConfigKey<String>.migration(
@@ -411,34 +411,43 @@ final class MigrationConfigKeyTests: XCTestCase {
 
 // MARK: - Test Helper Extensions
 
-private struct TestKeys: ConfigNamespaceKeys {
-
-    var oldStringKey: RWConfigKey<String> {
-        key("old_string_key", in: .default, default: "old_default")
+extension Configs.Keys {
+    
+    var test: TestKeys {
+        TestKeys()
     }
     
-    var newStringKey: RWConfigKey<String> {
-        key("new_string_key", in: .default, default: "new_default")
-    }
-    
-    var anotherStringKey: RWConfigKey<String> {
-        key("another_string_key", in: .default, default: "another_default")
-    }
-    
-    var oldBoolKey: RWConfigKey<Bool> {
-        key("old_bool_key", in: .default, default: false)
-    }
-    
-    var readOnlyKey: ROConfigKey<String> {
-        key("readonly_key", in: .default, default: "readonly_default")
-    }
-    
-    var migrationKey: RWConfigKey<String> {
-        RWConfigKey<String>.migration(
-            from: oldStringKey,
-            to: newStringKey,
-            firstReadPolicy: .default
-        ) { "MIGRATED_\($0.uppercased())" }
+    struct TestKeys: ConfigNamespaceKeys {
+        
+        typealias Parent = Configs.Keys
+        
+        var oldStringKey: RWConfigKey<String> {
+            key("old_string_key", in: .default, default: "old_default")
+        }
+        
+        var newStringKey: RWConfigKey<String> {
+            key("new_string_key", in: .default, default: "new_default")
+        }
+        
+        var anotherStringKey: RWConfigKey<String> {
+            key("another_string_key", in: .default, default: "another_default")
+        }
+        
+        var oldBoolKey: RWConfigKey<Bool> {
+            key("old_bool_key", in: .default, default: false)
+        }
+        
+        var readOnlyKey: ROConfigKey<String> {
+            key("readonly_key", in: .default, default: "readonly_default")
+        }
+        
+        var migrationKey: RWConfigKey<String> {
+            RWConfigKey<String>.migration(
+                from: oldStringKey,
+                to: newStringKey,
+                firstReadPolicy: .default
+            ) { "MIGRATED_\($0.uppercased())" }
+        }
     }
 }
 

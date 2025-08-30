@@ -46,8 +46,6 @@ public struct Configs: ConfigsType {
         get { self }
         set { self = newValue }
     }
-    
-    public var keyPrefix: String { "" }
 
     /// Creates a configuration instance with a custom store registry
     ///

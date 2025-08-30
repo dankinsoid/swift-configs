@@ -37,6 +37,8 @@ import Foundation
 ///
 /// The default `keyPrefix` is empty, emphasizing that organization is the main benefit.
 public protocol ConfigNamespaceKeys {
+    
+    associatedtype Parent: ConfigNamespaceKeys
 
     /// Optional prefix applied to all keys in this namespace
     ///
@@ -44,11 +46,16 @@ public protocol ConfigNamespaceKeys {
     /// Override this property only when you need key prefixing.
     ///
     /// ```swift
-    /// var keyPrefix: String { "feature/" }  // Optional key prefixing
+    /// static var keyPrefix: String { "feature/" }  // Optional key prefixing
     /// ```
     ///
     /// - Returns: The prefix string, or empty string (default) for no prefix
-    var keyPrefix: String { get }
+    static var keyPrefix: String { get }
+}
+
+extension Never: ConfigNamespaceKeys {
+
+    public typealias Parent = Never
 }
 
 extension ConfigNamespaceKeys {
@@ -56,7 +63,19 @@ extension ConfigNamespaceKeys {
     /// Default implementation provides no prefix - namespaces are primarily for organization
     ///
     /// Override this property only when runtime key prefixing is needed.
-    public var keyPrefix: String { "" }
+    public static var keyPrefix: String { "" }
+    
+    public var keyPrefix: String {
+        Self.fullKeyPrefix
+    }
+    
+    private static var fullKeyPrefix: String {
+        if Parent.self != Never.self {
+            return Parent.fullKeyPrefix + Self.keyPrefix
+        } else {
+            return Self.keyPrefix
+        }
+    }
 }
 
 /// A configuration namespace that provides compile-time key organization
@@ -91,18 +110,6 @@ public struct ConfigNamespace<Keys: ConfigNamespaceKeys>: ConfigsType {
     public var configs: Configs {
         get { base.configs }
         set { base.configs = newValue }
-    }
-
-    /// The accumulated prefix from all parent namespaces plus this namespace's prefix
-    ///
-    /// This property automatically concatenates prefixes as you navigate deeper into
-    /// the namespace hierarchy, ensuring proper key qualification.
-    ///
-    /// ```swift
-    /// // If base has "app/" and keys has "secure.", keyPrefix returns "app/secure."
-    /// ```
-    public var keyPrefix: String {
-        base.keyPrefix + keys.keyPrefix
     }
 
     /// Creates a new namespace instance
