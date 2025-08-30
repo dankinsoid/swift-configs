@@ -16,14 +16,14 @@ import Foundation
 ///     
 ///     struct Security: ConfigNamespaceKeys {
 ///         var apiToken: RWConfigKey<String?> {
-///             RWConfigKey("api-token", in: .secure, default: nil)
+///             key("api-token", in: .secure, default: nil)
 ///         }
 ///         
 ///         var auth: Auth { Auth() }
 ///         
 ///         struct Auth: ConfigNamespaceKeys {
 ///             var biometricEnabled: RWConfigKey<Bool> {
-///                 RWConfigKey("biometric", in: .default, default: false)
+///                 key("biometric", in: .default, default: false)
 ///             }
 ///         }
 ///     }

@@ -11,6 +11,10 @@ final class SwiftConfigsTests: XCTestCase {
         ("testEnvironmentVariableStore", testEnvironmentVariableStore),
         ("testMigrationConfigStore", testMigrationConfigStore),
         ("testPrefixConfigStore", testPrefixConfigStore),
+        ("testNamespaceWithKeyPrefix", testNamespaceWithKeyPrefix),
+        ("testNestedNamespaceKeyPrefix", testNestedNamespaceKeyPrefix),
+        ("testNamespaceKeyPrefixConcatenation", testNamespaceKeyPrefixConcatenation),
+        ("testNamespaceWithOverrides", testNamespaceWithOverrides),
     ]
 
     var store = InMemoryConfigStore()
@@ -161,6 +165,88 @@ final class SwiftConfigsTests: XCTestCase {
         // Test isWritable delegates to underlying store
         XCTAssertEqual(prefixStore.isWritable, underlyingStore.isWritable)
     }
+
+    func testNamespaceWithKeyPrefix() throws {
+        // Arrange: Set up store with prefixed keys
+        try store.set("secret-token", for: "security.api-token")
+        try store.set("true", for: "security.encryption-enabled")
+        try store.set("normal-value", for: "app-setting")
+        
+        let configs = Configs()
+        
+        // Act: Access through namespace with prefix
+        let apiToken = configs.security.apiToken
+        let encryptionEnabled = configs.security.encryptionEnabled
+        let normalSetting = configs.appSetting
+        
+        // Assert: Prefixed keys should be found, non-prefixed key should be found too
+        XCTAssertEqual(apiToken, "secret-token")
+        XCTAssertEqual(encryptionEnabled, true)
+        XCTAssertEqual(normalSetting, "normal-value")
+        
+        // Test that keyPrefix is correctly applied when reading values
+        let securityNamespace = configs.security
+        XCTAssertEqual(securityNamespace.keyPrefix, "security.")
+        
+        // Test direct key access (this will use the prefixed key to read from store)
+        let directApiToken = securityNamespace.apiToken
+        XCTAssertEqual(directApiToken, "secret-token")
+    }
+
+    func testNestedNamespaceKeyPrefix() throws {
+        // Arrange: Set up store with nested prefixed keys
+        try store.set("nested-value", for: "security.auth.jwt-secret")
+        try store.set("42", for: "security.auth.timeout")
+        
+        let configs = Configs()
+        
+        // Act: Access through nested namespace with prefixes
+        let jwtSecret = configs.security.auth.jwtSecret
+        let timeout = configs.security.auth.timeout
+        
+        // Assert: Nested prefixes should work correctly
+        XCTAssertEqual(jwtSecret, "nested-value")
+        XCTAssertEqual(timeout, 42)
+    }
+
+    func testNamespaceKeyPrefixConcatenation() {
+        // Arrange
+        let configs = Configs()
+        
+        // Act: Get key prefixes at different levels
+        let rootPrefix = configs.keyPrefix
+        let securityPrefix = configs.security.keyPrefix
+        let authPrefix = configs.security.auth.keyPrefix
+        
+        // Assert: Prefixes should concatenate correctly
+        XCTAssertEqual(rootPrefix, "")
+        XCTAssertEqual(securityPrefix, "security.")
+        XCTAssertEqual(authPrefix, "security.auth.")
+    }
+
+    func testNamespaceWithOverrides() throws {
+        // Arrange: Set up store with a prefixed key
+        try store.set("store-value", for: "security.api-token")
+        
+        let configs = Configs()
+        
+        // Act & Assert: Normal access should read from store
+        XCTAssertEqual(configs.security.apiToken, "store-value")
+        
+        // Method 1: Create override on namespace itself - this applies the prefix correctly
+        let securityNamespace = configs.security
+        let updatedNamespace = securityNamespace.with(\.apiToken, "namespace-override")
+        XCTAssertEqual(updatedNamespace.apiToken, "namespace-override")
+        
+        // Method 2: Create override using root configs with the actual prefixed key
+        let securityKey = SecurityNamespace().apiToken
+        let prefixedKey = securityKey.prefix("security.")  // Manual prefix for root-level override
+        let updatedConfigs = configs.with(prefixedKey, "root-override")
+        XCTAssertEqual(updatedConfigs.security.apiToken, "root-override")
+        
+        // Original configs should still read from store
+        XCTAssertEqual(configs.security.apiToken, "store-value")
+    }
 }
 
 private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
@@ -175,6 +261,39 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 private extension Configs.Keys {
 
     var testKey: ROConfigKey<String> {
-        ConfigKey("key", in: .default, default: "defaultValue")
+        key("key", in: .default, default: "defaultValue")
+    }
+    
+    var appSetting: ROConfigKey<String> {
+        key("app-setting", in: .default, default: "default-value")
+    }
+    
+    var security: SecurityNamespace { SecurityNamespace() }
+}
+
+private struct SecurityNamespace: ConfigNamespaceKeys {
+    var keyPrefix: String { "security." }
+    
+    var apiToken: RWConfigKey<String> {
+        key("api-token", in: .default, default: "default-token")
+    }
+    
+    var encryptionEnabled: ROConfigKey<Bool> {
+        key("encryption-enabled", in: .default, default: false)
+    }
+    
+    var auth: AuthNamespace { AuthNamespace() }
+}
+
+private struct AuthNamespace: ConfigNamespaceKeys {
+
+    var keyPrefix: String { "auth." }
+
+    var jwtSecret: ROConfigKey<String> {
+        key("jwt-secret", in: .default, default: "default-secret")
+    }
+
+    var timeout: ROConfigKey<Int> {
+        key("timeout", in: .default, default: 30)
     }
 }

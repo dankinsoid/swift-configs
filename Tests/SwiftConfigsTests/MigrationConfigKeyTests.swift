@@ -411,25 +411,26 @@ final class MigrationConfigKeyTests: XCTestCase {
 
 // MARK: - Test Helper Extensions
 
-private struct TestKeys {
+private struct TestKeys: ConfigNamespaceKeys {
+
     var oldStringKey: RWConfigKey<String> {
-        RWConfigKey("old_string_key", in: .default, default: "old_default")
+        key("old_string_key", in: .default, default: "old_default")
     }
     
     var newStringKey: RWConfigKey<String> {
-        RWConfigKey("new_string_key", in: .default, default: "new_default")
+        key("new_string_key", in: .default, default: "new_default")
     }
     
     var anotherStringKey: RWConfigKey<String> {
-        RWConfigKey("another_string_key", in: .default, default: "another_default")
+        key("another_string_key", in: .default, default: "another_default")
     }
     
     var oldBoolKey: RWConfigKey<Bool> {
-        RWConfigKey("old_bool_key", in: .default, default: false)
+        key("old_bool_key", in: .default, default: false)
     }
     
     var readOnlyKey: ROConfigKey<String> {
-        ROConfigKey("readonly_key", in: .default, default: "readonly_default")
+        key("readonly_key", in: .default, default: "readonly_default")
     }
     
     var migrationKey: RWConfigKey<String> {

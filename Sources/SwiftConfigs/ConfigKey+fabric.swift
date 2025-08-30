@@ -1,180 +1,88 @@
 import Foundation
 
-/// Defines permission types for configuration keys
-///
-/// Used to enforce read-only or read-write access at compile time.
-public protocol KeyAccess {
-    /// Whether this permission type supports writing operations
-    static var isWritable: Bool { get }
-}
-
-/// Read-only permission for configuration keys
-///
-/// Keys with this permission cannot be modified through the configuration system.
-public enum ReadOnly: KeyAccess {
-    public static var isWritable: Bool { false }
-}
-
-/// Read-write permission for configuration keys
-///
-/// Keys with this permission support both reading and writing operations.
-public enum ReadWrite: KeyAccess {
-    public static var isWritable: Bool { true }
-}
-
-/// Configuration key with specified value type and access permissions
-///
-/// Encapsulates all operations for a configuration value, including reading, writing,
-/// existence checking, and change observation. The `Access` type parameter enforces
-/// read-only or read-write permissions at compile time.
-public struct ConfigKey<Value, Access: KeyAccess> {
-
-    public let name: String
-    private let _get: (StoreRegistryType) -> Value
-    private let _set: (StoreRegistryType, Value) -> Void
-    private let _remove: (StoreRegistryType) throws -> Void
-    private let _exists: (StoreRegistryType) -> Bool
-    private let _listen: (StoreRegistryType, @escaping (Value) -> Void) -> Cancellation
-
-    /// Creates a configuration key with custom behavior
-    ///
-    /// - Parameters:
-    ///   - key: The unique identifier for this configuration key
-    ///   - get: Closure to retrieve the current value
-    ///   - set: Closure to store a new value
-    ///   - delete: Closure to remove the stored value
-    ///   - exists: Closure to check if a value exists
-    ///   - onChange: Closure to observe value changes
-    ///
-    /// - Note: Most users should use the convenience initializers instead of this low-level constructor.
-    public init(
-        _ key: String,
+public extension ConfigNamespaceKeys {
+    
+    @inlinable
+    func key<Value, Access: KeyAccess>(
+        _ name: String,
         get: @escaping (StoreRegistryType) -> Value,
         set: @escaping (StoreRegistryType, Value) -> Void,
         remove: @escaping (StoreRegistryType) throws -> Void,
         exists: @escaping (StoreRegistryType) -> Bool,
         onChange: @escaping (StoreRegistryType, @escaping (Value) -> Void) -> Cancellation
-    ) {
-        name = key
-        _get = get
-        _set = set
-        _remove = remove
-        _exists = exists
-        _listen = onChange
-    }
-
-    public func get(registry: StoreRegistryType) -> Value {
-        _get(registry)
-    }
-
-    public func set(registry: StoreRegistryType, _ newValue: Value) {
-        _set(registry, newValue)
-    }
-
-    /// Removes the stored value for this key
-    ///
-    /// - Warning: Silently ignores deletion errors. Use `try _remove(registry)` directly if error handling is needed.
-    public func remove(registry: StoreRegistryType) {
-        try? _remove(registry)
-    }
-
-    public func exists(registry: StoreRegistryType) -> Bool {
-        _exists(registry)
-    }
-
-    public func onChange(registry: StoreRegistryType, _ observer: @escaping (Value) -> Void) -> Cancellation {
-        _listen(registry, observer)
-    }
-
-    /// Transforms this key to work with a different value type
-    ///
-    /// - Parameters:
-    ///   - transform: Function to convert from this key's value type to the target type
-    ///   - reverseTransform: Function to convert from the target type back to this key's value type
-    /// - Returns: A new key that operates on the transformed value type
-    /// - Note: Both transform functions must be pure and reversible for consistent behavior.
-    public func map<T>(
-        _ transform: @escaping (Value) -> T,
-        _ reverseTransform: @escaping (T) -> Value
-    ) -> ConfigKey<T, Access> {
-        ConfigKey<T, Access>(
-            name,
-            get: { registry in
-                transform(self.get(registry: registry))
-            },
-            set: { registry, newValue in
-                self.set(registry: registry, reverseTransform(newValue))
-            },
-            remove: { registry in
-                self.remove(registry: registry)
-            },
-            exists: { registry in
-                self.exists(registry: registry)
-            },
-            onChange: { registry, observer in
-                self.onChange(registry: registry) { newValue in
-                    observer(transform(newValue))
-                }
-            }
+    ) -> ConfigKey<Value, Access> {
+        ConfigKey(
+            keyPrefix + name,
+            get: get,
+            set: set,
+            remove: remove,
+            exists: exists,
+            onChange: onChange
         )
     }
-}
 
-public typealias ROConfigKey<Value> = ConfigKey<Value, ReadOnly>
-public typealias RWConfigKey<Value> = ConfigKey<Value, ReadWrite>
-
-@available(*, deprecated, renamed: "ROConfigKey")
-public typealias ROKey<Value> = ConfigKey<Value, ReadOnly>
-@available(*, deprecated, renamed: "RWConfigKey")
-public typealias RWKey<Value> = ConfigKey<Value, ReadWrite>
-
-public extension Configs {
-
-    var keys: Keys { Keys() }
-
-    struct Keys: ConfigNamespaceKeys {
-
-        public init() {}
-
-        /// Read-only permission for configuration keys
-        ///
-        /// Keys with this permission cannot be modified through the configuration system.
-        @available(*, deprecated, renamed: "ReadOnly")
-        public typealias ReadOnly = SwiftConfigs.ReadOnly
-
-        /// Read-write permission for configuration keys
-        ///
-        /// Keys with this permission support both reading and writing operations.
-        @available(*, deprecated, renamed: "ReadWrite")
-        public typealias ReadWrite = SwiftConfigs.ReadWrite
-    
-        /// Configuration key with specified value type and access permissions
-        ///
-        /// Encapsulates all operations for a configuration value, including reading, writing,
-        /// existence checking, and change observation. The `Access` type parameter enforces
-        /// read-only or read-write permissions at compile time.
-        @available(*, deprecated, renamed: "ConfigKey")
-        public typealias Key<Value, Access: KeyAccess> = ConfigKey<Value, Access>
-    }
-}
-
-public extension ConfigKey {
-
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    @inlinable
+    func key<Value, Access: KeyAccess>(
         _ name: String,
         store: @escaping (StoreRegistryType) -> ConfigStore,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool
-    ) {
-        self = Configs.Keys().key(
-            name,
-            store: store,
-            as: transformer,
-            default: defaultValue(),
-            cacheDefaultValue: cacheDefaultValue
-        )
+    ) -> ConfigKey<Value, Access> {
+        let name = keyPrefix + name
+        return ConfigKey(name) { registry in
+            let store = store(registry)
+            do {
+                if let value = try store.get(name, as: transformer) {
+                    return value
+                }
+            } catch {
+                ConfigSystem.fail(.retrievalFailed(key: name, error))
+            }
+            let result = defaultValue()
+            do {
+                if cacheDefaultValue, store.isWritable, let value = try transformer.encode(result) {
+                    try store.set(value, for: name)
+                }
+            } catch {
+                ConfigSystem.fail(.storingFailed(key: name, error))
+            }
+            return result
+        } set: { registry, newValue in
+            let store = store(registry)
+            if store.isWritable {
+                do {
+                    try store.set(transformer.encode(newValue), for: name)
+                } catch {
+                    ConfigSystem.fail(.storingFailed(key: name, error))
+                }
+            }
+        } remove: { registry in
+            let store = store(registry)
+            if store.isWritable {
+                try store.set(nil, for: name)
+            }
+        } exists: { registry in
+            let store = store(registry)
+            do {
+                return try store.exists(name)
+            } catch {
+                ConfigSystem.fail(.existenceCheckFailed(key: name, error))
+                return false
+            }
+        } onChange: { registry, observer in
+            let store = store(registry)
+            let cancellation = store.onChangeOfKey(name) { value in
+                do {
+                    if let value {
+                        try observer(transformer.decode(value))
+                    }
+                } catch {
+                    ConfigSystem.fail(.retrievalFailed(key: name, error))
+                }
+            }
+            return cancellation
+        }
     }
 
     /// Creates a configuration key with a specific store and transformer
@@ -185,16 +93,16 @@ public extension ConfigKey {
     ///   - transformer: How to encode/decode values for storage
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
-    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:as:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `func key<Value, Access: KeyAccess>(_:in:as:default:cacheDefaultValue:)`
+    @inlinable
+    func key<Value, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             store: { _ in store },
             as: transformer,
@@ -211,16 +119,16 @@ public extension ConfigKey {
     ///   - transformer: How to encode/decode values for storage
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
-    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:as:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `func key<Value, Access: KeyAccess>(_:store:as:default:cacheDefaultValue:)`
+    @inlinable
+    func key<Value, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
         as transformer: ConfigTransformer<Value>,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             store: { $0.store(for: category) },
             as: transformer,
@@ -237,15 +145,15 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Uses the built-in string conversion transformer for encoding/decoding
-    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `func key<Value, Access: KeyAccess>(_:in:default:cacheDefaultValue:)`
+    @inlinable
+    func key<Value: LosslessStringConvertible, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) where Value: LosslessStringConvertible {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             store: { _ in store },
             as: .stringConvertable,
@@ -262,14 +170,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init<T>(
+    @inlinable
+    func key<Value: LosslessStringConvertible, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value? = nil,
         cacheDefaultValue: Bool = false
-    ) where T: LosslessStringConvertible, Value == T? {
-        self.init(
+    ) -> ConfigKey<Value?, Access> {
+        self.key(
             key,
             store: store,
             as: .optional(.stringConvertable),
@@ -285,15 +193,15 @@ public extension ConfigKey {
     ///   - category: The configuration category (determines which store to use)
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
-    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `func key<Value, Access: KeyAccess>(_:store:default:cacheDefaultValue:)`
+    @inlinable
+    func key<Value: LosslessStringConvertible, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) where Value: LosslessStringConvertible {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             store: { $0.store(for: category) },
             as: .stringConvertable,
@@ -310,14 +218,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or conversion fails. Recommended for most use cases as it integrates with the configuration system
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init<T>(
+    @inlinable
+    func key<Value: LosslessStringConvertible, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value? = nil,
         cacheDefaultValue: Bool = false
-    ) where T: LosslessStringConvertible, Value == T? {
-        self.init(
+    ) -> ConfigKey<Value?, Access> {
+        self.key(
             key,
             store: { $0.store(for: category) },
             as: .optional(.stringConvertable),
@@ -334,14 +242,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Stores the raw value and converts back to the enum type on retrieval.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    @inlinable
+    func key<Value: RawRepresentable, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
-        self.init(
+    ) -> ConfigKey<Value, Access> where Value.RawValue: LosslessStringConvertible {
+        self.key(
             key,
             store: store,
             as: .rawRepresentable,
@@ -358,14 +266,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Stores the raw value and converts back to the enum type on retrieval.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init(
+    @inlinable
+    func key<Value: RawRepresentable, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) where Value: RawRepresentable, Value.RawValue: LosslessStringConvertible {
-        self.init(
+    ) -> ConfigKey<Value, Access> where Value.RawValue: LosslessStringConvertible {
+        self.key(
             key,
             in: category,
             as: .rawRepresentable,
@@ -382,14 +290,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init<T>(
+    @inlinable
+    func key<Value: RawRepresentable, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value? = nil,
         cacheDefaultValue: Bool = false
-    ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
-        self.init(
+    ) -> ConfigKey<Value?, Access> where Value.RawValue: LosslessStringConvertible {
+        self.key(
             key,
             in: category,
             as: .optional(.rawRepresentable),
@@ -406,14 +314,14 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
-    init<T>(
+    @inlinable
+    func key<Value: RawRepresentable, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false
-    ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
-        self.init(
+    ) -> ConfigKey<Value?, Access> where Value.RawValue: LosslessStringConvertible {
+        self.key(
             key,
             store: store,
             as: .optional(.rawRepresentable),
@@ -431,17 +339,17 @@ public extension ConfigKey {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
-    init(
+    @inlinable
+    func key<Value: Codable, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
-    ) where Value: Codable {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             store: store,
             as: .json(decoder: decoder, encoder: encoder),
@@ -459,17 +367,17 @@ public extension ConfigKey {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
-    init(
+    @inlinable
+    func key<Value: Codable, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
-    ) where Value: Codable {
-        self.init(
+    ) -> ConfigKey<Value, Access> {
+        self.key(
             key,
             in: category,
             as: .json(decoder: decoder, encoder: encoder),
@@ -488,17 +396,17 @@ public extension ConfigKey {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
-    init<T>(
+    @inlinable
+    func key<Value: Codable, Access: KeyAccess>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value? = nil,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
-    ) where T: Codable, T? == Value {
-        self.init(
+    )  -> ConfigKey<Value?, Access> {
+        self.key(
             key,
             in: category,
             as: .optional(.json(decoder: decoder, encoder: encoder)),
@@ -517,17 +425,17 @@ public extension ConfigKey {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
-    init<T>(
+    @inlinable
+    func key<Value: Codable, Access: KeyAccess>(
         _ key: String,
         store: ConfigStore,
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
-    ) where T: Codable, T? == Value {
-        self.init(
+    )  -> ConfigKey<Value?, Access> {
+        self.key(
             key,
             store: store,
             as: .optional(.json(decoder: decoder, encoder: encoder)),
@@ -536,8 +444,3 @@ public extension ConfigKey {
         )
     }
 }
-
-#if compiler(>=5.6)
-    extension Configs.Keys: Sendable {}
-    extension ConfigKey: @unchecked Sendable {}
-#endif

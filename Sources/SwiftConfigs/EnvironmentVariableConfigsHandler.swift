@@ -10,8 +10,12 @@ import Foundation
 /// ```swift
 /// // Using with specific environment variables
 /// extension Configs.Keys {
-///     static let apiBaseURL = RWConfigKey("API_BASE_URL", in: .environment, default: "https://api.example.com")
-///     static let debugEnabled = RWConfigKey("DEBUG_ENABLED", in: .environment, default: false)
+///     var apiBaseURL: ROConfigKey<String> {
+///         key("API_BASE_URL", in: .environment, default: "https://api.example.com")
+///     }
+///     var debugEnabled: ROConfigKey<Bool> {
+///         key("DEBUG_ENABLED", in: .environment, default: false)
+///     }
 /// }
 /// ```
 ///

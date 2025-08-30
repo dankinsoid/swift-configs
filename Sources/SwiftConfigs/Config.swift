@@ -28,8 +28,8 @@ public extension ConfigWrapper {
     /// - Parameters:
     ///   - key: Key path to the configuration key in the Configs.Keys namespace
     ///   - configs: Configuration instance (uses default system if not specified)
-    init(_ key: KeyPath<Configs.Keys, ConfigKey<Value, Access>>, configs _: Configs = Configs()) {
-        self.init(Configs.Keys()[keyPath: key], configs: Configs())
+    init(_ key: KeyPath<Configs.Keys, ConfigKey<Value, Access>>, configs: Configs = Configs()) {
+        self.init(Configs.Keys()[keyPath: key], configs: configs)
     }
 
     /// Checks whether a value exists for this configuration key
@@ -181,17 +181,18 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
         in category: ConfigCategory,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: { $0.store(for: category) },
                 as: .stringConvertable,
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -207,17 +208,18 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
         store: ConfigStore,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .stringConvertable,
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 }
@@ -235,17 +237,18 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
         in category: ConfigCategory,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 in: category,
                 as: .rawRepresentable,
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -261,17 +264,18 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         wrappedValue defaultValue: @escaping @autoclosure () -> Value,
         _ key: String,
         store: ConfigStore,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .rawRepresentable,
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 }
@@ -294,17 +298,18 @@ public extension ConfigWrapper where Value: Codable {
         in category: ConfigCategory,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
-        encoder: JSONEncoder = JSONEncoder()
+        encoder: JSONEncoder = JSONEncoder(),
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 in: category,
                 as: .json(decoder: decoder, encoder: encoder),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -325,17 +330,18 @@ public extension ConfigWrapper where Value: Codable {
         store: ConfigStore,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
-        encoder: JSONEncoder = JSONEncoder()
+        encoder: JSONEncoder = JSONEncoder(),
+        configs: Configs = Configs()
     ) {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .json(decoder: decoder, encoder: encoder),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 }
@@ -353,17 +359,18 @@ public extension ConfigWrapper {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         in category: ConfigCategory,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 in: category,
                 as: .optional(.stringConvertable),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -379,17 +386,18 @@ public extension ConfigWrapper {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         store: ConfigStore,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .optional(.stringConvertable),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -405,17 +413,18 @@ public extension ConfigWrapper {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         in category: ConfigCategory,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 in: category,
                 as: .optional(.rawRepresentable),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -431,17 +440,18 @@ public extension ConfigWrapper {
         wrappedValue defaultValue: @escaping @autoclosure () -> Value = nil,
         _ key: String,
         store: ConfigStore,
-        cacheDefaultValue: Bool = false
+        cacheDefaultValue: Bool = false,
+        configs: Configs = Configs()
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .optional(.rawRepresentable),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -462,17 +472,18 @@ public extension ConfigWrapper {
         in category: ConfigCategory,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
-        encoder: JSONEncoder = JSONEncoder()
+        encoder: JSONEncoder = JSONEncoder(),
+        configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 in: category,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 
@@ -493,17 +504,18 @@ public extension ConfigWrapper {
         store: ConfigStore,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
-        encoder: JSONEncoder = JSONEncoder()
+        encoder: JSONEncoder = JSONEncoder(),
+        configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            ConfigKey(
+            configs.keys.key(
                 key,
                 store: store,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),
                 default: defaultValue(),
                 cacheDefaultValue: cacheDefaultValue
             ),
-            configs: Configs()
+            configs: configs
         )
     }
 }

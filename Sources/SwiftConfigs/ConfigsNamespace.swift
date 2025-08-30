@@ -14,11 +14,11 @@ import Foundation
 ///     
 ///     struct Security: ConfigNamespaceKeys {
 ///         var apiToken: RWConfigKey<String?> {
-///             RWConfigKey("api-token", in: .secure, default: nil)
+///             key("api-token", in: .secure, default: nil)
 ///         }
 ///         
 ///         var encryptionEnabled: ROConfigKey<Bool> {
-///             ROConfigKey("encryption-enabled", in: .secure, default: true)
+///             key("encryption-enabled", in: .secure, default: true)
 ///         }
 ///     }
 /// }

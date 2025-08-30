@@ -29,15 +29,15 @@ import SwiftConfigs
 public extension Configs.Keys {
     
     var apiToken: RWConfigKey<String?> {
-        RWConfigKey("api-token", in: .secure, default: nil)
+        key("api-token", in: .secure, default: nil)
     }
     
     var userID: ROConfigKey<UUID> { 
-        ROConfigKey("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
+        key("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
     }
     
     var serverURL: ROConfigKey<String> { 
-        ROConfigKey("SERVER_URL", in: .environment, default: "https://api.example.com")
+        key("SERVER_URL", in: .environment, default: "https://api.example.com")
     }
 }
 ```
@@ -132,15 +132,15 @@ struct AppSettings {
     var userID: UUID
     
     // Using category-based initialization (recommended)
-    @RWConfig(wrappedValue: nil, "api-token", in: .secure) 
+    @RWConfig("api-token", in: .secure) 
     var apiToken: String?
     
-    @RWConfig(wrappedValue: UserPreferences(), "user-preferences", in: .default)
-    var preferences: UserPreferences
+    @RWConfig("user-preferences", in: .default)
+    var preferences = UserPreferences()
     
     // Using store-based initialization (for specific store targeting)
-    @RWConfig(wrappedValue: false, "debug-mode", store: .inMemory) 
-    var debugMode: Bool
+    @RWConfig("debug-mode", store: .inMemory) 
+    var debugMode = false
 }
 
 let settings = AppSettings()
@@ -202,11 +202,11 @@ public extension Configs.Keys {
     struct Security: ConfigNamespaceKeys {
 
         public var apiToken: RWConfigKey<String?> {
-            RWConfigKey("api-token", in: .secure, default: nil)
+            key("api-token", in: .secure, default: nil)
         }
         
         public var encryptionEnabled: ROConfigKey<Bool> {
-            ROConfigKey("encryption-enabled", in: .secure, default: true)
+            key("encryption-enabled", in: .secure, default: true)
         }
     }
 }
@@ -236,7 +236,7 @@ public extension Configs.Keys {
         
         public struct Auth: ConfigNamespaceKeys {
             public var biometricEnabled: RWConfigKey<Bool> {
-                RWConfigKey("biometric-enabled", in: .default, default: false)
+                key("biometric-enabled", in: .default, default: false)
             }
         }
     }
@@ -260,7 +260,7 @@ public extension Configs.Keys {
         public var keyPrefix: String { "env/" }  // Optional key prefixing
         
         public var apiUrl: ROConfigKey<String> {
-            ROConfigKey("api-url", in: .environment, default: "localhost")
+            key("api-url", in: .environment, default: "localhost")
             // Final key name: "env/api-url"
         }
     }
@@ -377,35 +377,35 @@ public extension Configs.Keys {
     
     // String-convertible types
     var count: ROConfigKey<Int> { 
-        ROConfigKey("count", in: .default, default: 0)
+        key("count", in: .default, default: 0)
     }
     
     var rate: ROConfigKey<Double> {
-        ROConfigKey("rate", in: .default, default: 1.0)
+        key("rate", in: .default, default: 1.0)
     }
     
     // Enum types
     var theme: ROConfigKey<Theme> { 
-        ROConfigKey("theme", in: .default, default: .light)
+        key("theme", in: .default, default: .light)
     }
     
     // Codable types (stored as JSON)
     var settings: ROConfigKey<AppSettings> {
-        ROConfigKey("settings", in: .default, default: AppSettings())
+        key("settings", in: .default, default: AppSettings())
     }
     
     // Optional types
     var optionalValue: ROConfigKey<String?> {
-        ROConfigKey("optional", in: .default, default: nil)
+        key("optional", in: .default, default: nil)
     }
     
     // Using specific stores when needed
     var tempSetting: RWConfigKey<String> {
-        RWConfigKey("temp", store: .inMemory, default: "temp-value")
+        key("temp", store: .inMemory, default: "temp-value")
     }
     
     var secureToken: RWConfigKey<String?> {
-        RWConfigKey("secure-token", store: .keychain, default: nil)
+        key("secure-token", store: .keychain, default: nil)
     }
 }
 ```
@@ -419,11 +419,11 @@ public extension Configs.Keys {
     
     // Migrate from old boolean to new enum
     var notificationStyle: ROConfigKey<NotificationStyle> {
-        ROConfigKey("notification-style", in: .default, default: .none)
+        key("notification-style", in: .default, default: .none)
     }
     
     private var oldNotificationsEnabled: ROConfigKey<Bool> {
-        ROConfigKey("notifications-enabled", in: .default, default: false)
+        key("notifications-enabled", in: .default, default: false)
     }
     
     // Custom migration using multiplex stores can be done at bootstrap level:
@@ -551,7 +551,7 @@ Or add it through Xcode:
 
 ## Best Practices
 
-1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using `ROConfigKey`/`RWConfigKey` type aliases
+1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using the `key()` function
 2. **Use namespaces for organization** - group related keys into `ConfigNamespaceKeys` types for compile-time structure
 3. **Use appropriate categories** for different security and persistence needs
 4. **Provide sensible defaults** for all configuration keys

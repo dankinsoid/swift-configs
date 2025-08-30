@@ -80,6 +80,7 @@ public enum ConfigSystem {
         )
 	}
 
+    @usableFromInline
     static func fail(_ error: ConfigFail) {
         errorHandler(error)
     }
