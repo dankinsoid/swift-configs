@@ -195,15 +195,17 @@ SwiftConfigs supports namespace-based organization of configuration keys, provid
 Group related keys in namespace extensions of `Configs.Keys`:
 
 ```swift
-extension Configs.Keys {
+public extension Configs.Keys {
+
     var security: Security { Security() }
     
     struct Security: ConfigNamespaceKeys {
-        var apiToken: RWConfigKey<String?> {
+
+        public var apiToken: RWConfigKey<String?> {
             RWConfigKey("api-token", in: .secure, default: nil)
         }
         
-        var encryptionEnabled: ROConfigKey<Bool> {
+        public var encryptionEnabled: ROConfigKey<Bool> {
             ROConfigKey("encryption-enabled", in: .secure, default: true)
         }
     }
@@ -224,12 +226,16 @@ configs.security.encryptionEnabled = false
 Create deeper hierarchies by nesting namespace types:
 
 ```swift
-extension Configs.Keys {
+public extension Configs.Keys {
+
+    var features: Features { Features() }
+
     struct Features: ConfigNamespaceKeys {
-        var auth: Auth { Auth() }
+    
+        public var auth: Auth { Auth() }
         
-        struct Auth: ConfigNamespaceKeys {
-            var biometricEnabled: RWConfigKey<Bool> {
+        public struct Auth: ConfigNamespaceKeys {
+            public var biometricEnabled: RWConfigKey<Bool> {
                 RWConfigKey("biometric-enabled", in: .default, default: false)
             }
         }
@@ -246,12 +252,14 @@ configs.features.auth.biometricEnabled = true
 Namespaces are primarily for code organization. But if needed, you can add a `keyPrefix` to automatically prefix all keys in that namespace:
 
 ```swift
-extension Configs.Keys {
+public extension Configs.Keys {
 
-    struct Environment: ConfigNamespaceKeys {
-        var keyPrefix: String { "env/" }  // Optional key prefixing
+    var environment: Environment { Environment() }
+
+     struct Environment: ConfigNamespaceKeys {
+        public var keyPrefix: String { "env/" }  // Optional key prefixing
         
-        var apiUrl: ROConfigKey<String> {
+        public var apiUrl: ROConfigKey<String> {
             ROConfigKey("api-url", in: .environment, default: "localhost")
             // Final key name: "env/api-url"
         }
