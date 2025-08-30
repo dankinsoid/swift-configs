@@ -1,78 +1,79 @@
 import Foundation
 
-/// Defines the structure and prefix for a configuration namespace
+/// Defines a collection of configuration keys for compile-time organization
 ///
-/// Types conforming to `ConfigNamespaceKeys` define configuration key collections
-/// with an optional prefix that gets applied to all keys within the namespace.
-/// This enables hierarchical organization and runtime key prefixing.
+/// Types conforming to `ConfigNamespaceKeys` group related configuration keys together,
+/// providing compile-time structure and type safety. The primary purpose is organizational -
+/// keeping related keys grouped in logical collections.
 ///
 /// ## Defining Namespaces
 ///
 /// ```swift
-/// struct SecurityKeys: ConfigNamespaceKeys {
-///     var keyPrefix: String { "security/" }
-///     
-///     var apiToken: RWConfigKey<String?> {
-///         RWConfigKey("api-token", in: .secure, default: nil)
-///         // Final key name: "security/api-token"
-///     }
-/// }
-/// 
 /// extension Configs.Keys {
-///     var security: SecurityKeys { SecurityKeys() }
+///     var security: Security { Security() }
+///     
+///     struct Security: ConfigNamespaceKeys {
+///         var apiToken: RWConfigKey<String?> {
+///             RWConfigKey("api-token", in: .secure, default: nil)
+///         }
+///         
+///         var encryptionEnabled: ROConfigKey<Bool> {
+///             ROConfigKey("encryption-enabled", in: .secure, default: true)
+///         }
+///     }
 /// }
 /// ```
 ///
-/// ## Prefix Flexibility
+/// ## Runtime Key Prefixing (Optional)
 ///
-/// You have complete control over the separator and format:
-/// - `"feature/"` - Slash-separated paths
-/// - `"module."` - Dot-separated identifiers
-/// - `"env_"` - Underscore prefixes
-/// - `""` - No prefix (default behavior)
+/// Optionally, you can add runtime key prefixing by implementing `keyPrefix`:
 ///
-/// - Note: Prefixes from nested namespaces are concatenated automatically
+/// ```swift
+/// struct Security: ConfigNamespaceKeys {
+///     var keyPrefix: String { "security/" }  // All keys get this prefix
+///     // ...
+/// }
+/// ```
+///
+/// The default `keyPrefix` is empty, emphasizing that organization is the main benefit.
 public protocol ConfigNamespaceKeys {
 
-    /// The prefix applied to all keys in this namespace
+    /// Optional runtime prefix applied to all keys in this namespace
     ///
-    /// Define this property to specify how keys in this namespace should be prefixed.
-    /// When namespaces are nested, prefixes are concatenated in order.
+    /// Most namespaces don't need prefixes - they're primarily for compile-time organization.
+    /// Override this property only when you need runtime key prefixing.
     ///
     /// ```swift
-    /// // Example: "feature/auth." results in keys like "feature/auth.token"
-    /// var keyPrefix: String { "feature/auth." }
+    /// var keyPrefix: String { "feature/" }  // Optional runtime prefixing
     /// ```
     ///
-    /// - Returns: The prefix string, or empty string for no prefix
+    /// - Returns: The prefix string, or empty string (default) for no prefix
     var keyPrefix: String { get }
 }
 
 extension ConfigNamespaceKeys {
 
-    /// Default implementation provides no prefix
+    /// Default implementation provides no prefix - namespaces are primarily for organization
     ///
-    /// Override this property in your namespace types to provide custom prefixing.
+    /// Override this property only when runtime key prefixing is needed.
     public var keyPrefix: String { "" }
 }
 
-/// A configuration namespace that provides hierarchical key organization
+/// A configuration namespace that provides compile-time key organization
 ///
-/// `ConfigNamespace` wraps a `ConfigNamespaceKeys` type and enables hierarchical
-/// access to configuration values with automatic key prefixing. Namespaces can be
-/// nested to create deep organizational structures.
+/// `ConfigNamespace` wraps a `ConfigNamespaceKeys` type to enable hierarchical
+/// access to logically grouped configuration keys. The main benefit is compile-time
+/// organization and type safety.
 ///
 /// ## Usage
 ///
 /// ```swift
-/// // Access through nested namespaces
-/// let secureToken = configs.security.auth.apiToken
-/// 
-/// // Equivalent direct access with manual prefixing
-/// let directToken = configs.get(apiTokenKey.prefix("security/auth."))
+/// // Access through organized namespaces
+/// let secureToken = configs.security.apiToken
+/// let authEnabled = configs.security.authEnabled
 /// 
 /// // Set values through namespaces
-/// configs.security.auth.apiToken = "new-token"
+/// configs.security.apiToken = "new-token"
 /// ```
 ///
 /// ## Value Semantics
@@ -80,8 +81,8 @@ extension ConfigNamespaceKeys {
 /// Like all `ConfigsType` conforming types, `ConfigNamespace` is a value type.
 /// Operations return new instances rather than modifying the existing one.
 ///
-/// - Note: The `keyPrefix` property automatically concatenates the current namespace
-///   prefix with any base prefix, enabling seamless nesting.
+/// - Note: The `keyPrefix` property automatically concatenates prefixes from nested
+///   namespaces when they are non-empty.
 @dynamicMemberLookup
 public struct ConfigNamespace<Keys: ConfigNamespaceKeys>: ConfigsType {
 

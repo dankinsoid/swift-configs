@@ -1,35 +1,35 @@
 import Foundation
 
-/// Defines a hierarchical configuration interface with namespace support
+/// Defines a configuration interface with namespace-based key organization
 ///
-/// Types conforming to `ConfigsType` can expose configuration keys through namespaces,
-/// allowing for organized, hierarchical access to configuration values. Each instance
-/// maintains its own `keyPrefix` that is automatically applied to all key operations.
+/// Types conforming to `ConfigsType` provide access to configuration keys organized
+/// into logical namespaces. The primary benefit is compile-time organization and
+/// type safety for related configuration keys.
 ///
-/// ## Namespace Hierarchy
+/// ## Namespace Organization
 ///
-/// Namespaces can be nested to create hierarchical organization:
+/// Define related keys in namespace extensions:
 ///
 /// ```swift
-/// // Define nested namespaces
 /// extension Configs.Keys {
-///     var secure: SecureKeys { SecureKeys() }
-/// }
-///
-/// struct SecureKeys: ConfigNamespaceKeys {
-///     var keyPrefix: String { "secure/" }
-///     var auth: AuthKeys { AuthKeys() }
-/// }
-///
-/// struct AuthKeys: ConfigNamespaceKeys {
-///     var keyPrefix: String { "auth." }
-///     var apiToken: RWConfigKey<String?> {
-///         RWConfigKey("token", in: .secure, default: nil)
+///     var security: Security { Security() }
+///     
+///     struct Security: ConfigNamespaceKeys {
+///         var apiToken: RWConfigKey<String?> {
+///             RWConfigKey("api-token", in: .secure, default: nil)
+///         }
+///         
+///         var auth: Auth { Auth() }
+///         
+///         struct Auth: ConfigNamespaceKeys {
+///             var biometricEnabled: RWConfigKey<Bool> {
+///                 RWConfigKey("biometric", in: .default, default: false)
+///             }
+///         }
 ///     }
 /// }
 ///
-/// // Access: configs.secure.auth.apiToken
-/// // Final key name: "secure/auth.token"
+/// // Access: configs.security.apiToken, configs.security.auth.biometricEnabled
 /// ```
 ///
 /// ## Value Types
@@ -37,8 +37,7 @@ import Foundation
 /// All conforming types are value types. Operations like `with(...)` return new instances
 /// rather than mutating the existing one, ensuring immutable, predictable behavior.
 ///
-/// - Note: The `configs` property provides access to the underlying `Configs` instance,
-///   while `keyPrefix` accumulates namespace prefixes as you navigate deeper into the hierarchy.
+/// - Note: Key prefixes are empty by default - add them only when needed for runtime prefixing.
 public protocol ConfigsType {
 
     associatedtype Keys
@@ -52,12 +51,11 @@ public extension ConfigsType {
     /// Creates a nested namespace from a key path
     ///
     /// This subscript enables seamless navigation through namespace hierarchies using
-    /// dynamic member lookup. The resulting namespace automatically inherits and
-    /// extends the current key prefix.
+    /// dynamic member lookup for compile-time organization of related keys.
     ///
     /// ```swift
-    /// let secureConfigs = configs.secure  // Returns ConfigNamespace<SecureKeys>
-    /// let authToken = configs.secure.auth.token  // Automatic prefix concatenation
+    /// let secureConfigs = configs.security  // Returns ConfigNamespace<Security>
+    /// let authSettings = configs.security.auth  // Nested namespace access
     /// ```
     @inlinable subscript<Scope: ConfigNamespaceKeys>(dynamicMember keyPath: KeyPath<Keys, Scope>) -> ConfigNamespace<Scope> {
         ConfigNamespace(keys[keyPath: keyPath], base: self)
@@ -65,12 +63,12 @@ public extension ConfigsType {
 
     /// Direct access to read-only configuration values
     ///
-    /// Provides seamless access to configuration values through dynamic member lookup.
-    /// The key name is automatically prefixed with the current namespace path.
+    /// Provides seamless access to configuration values through dynamic member lookup
+    /// with compile-time type safety and organization.
     ///
     /// ```swift
     /// let userId = configs.userId  // Direct value access
-    /// let secureToken = configs.secure.token  // Nested namespace access
+    /// let secureToken = configs.security.apiToken  // Namespace access
     /// ```
     @inlinable subscript<Value>(dynamicMember keyPath: KeyPath<Keys, ConfigKey<Value, ReadOnly>>) -> Value {
         self.get(keyPath)
@@ -78,12 +76,12 @@ public extension ConfigsType {
 
     /// Direct access to read-write configuration values
     ///
-    /// Provides seamless read and write access to configuration values. The key name
-    /// is automatically prefixed with the current namespace path.
+    /// Provides seamless read and write access to configuration values with
+    /// compile-time type safety through namespace organization.
     ///
     /// ```swift
     /// configs.apiToken = "new-token"  // Direct value assignment
-    /// configs.secure.userPrefs = prefs  // Nested namespace assignment
+    /// configs.security.userPrefs = prefs  // Namespace assignment
     /// ```
     @inlinable subscript<Value>(dynamicMember keyPath: KeyPath<Keys, ConfigKey<Value, ReadWrite>>) -> Value {
         get {
