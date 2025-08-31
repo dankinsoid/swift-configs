@@ -77,7 +77,34 @@ public extension Configs {
     /// This can be used to determine if remote configuration values have been loaded
     /// at least once since the application started.
     var hasFetched: Bool { registry.hasFetched }
-    
+
+    /// Direct access to read-write configuration values
+    ///
+    /// Provides seamless read and write access to configuration values with
+    /// compile-time type safety through namespace organization.
+    ///
+    /// ```swift
+    /// configs[.apiToken] = "new-token"  // Direct value assignment
+    /// configs[.Security.userPrefs] = prefs  // Namespace assignment
+    /// ```
+    subscript<Value>(_ key: ConfigKey<Value, ReadWrite>) -> Value {
+        get { get(key) }
+        set { set(key, newValue) }
+    }
+
+    /// Direct access to read-only configuration values
+    ///
+    /// Provides seamless access to configuration values through dynamic member lookup
+    /// with compile-time type safety and organization.
+    ///
+    /// ```swift
+    /// let userId = configs[.userId]  // Direct value access
+    /// let secureToken = configs[.Security.apiToken]  // Namespace access
+    /// ```
+    subscript<Value>(_ key: ConfigKey<Value, ReadOnly>) -> Value {
+        get { get(key) }
+    }
+
     /// Gets a configuration value using a config key
     func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
         if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {

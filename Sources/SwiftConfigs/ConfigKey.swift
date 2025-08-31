@@ -160,7 +160,6 @@ public extension Configs {
 
 public extension ConfigKey {
 
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ name: String,
         store: @escaping (StoreRegistryType) -> ConfigStore,
@@ -186,7 +185,6 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:as:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         store: ConfigStore,
@@ -212,7 +210,6 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:as:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -238,7 +235,6 @@ public extension ConfigKey {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Uses the built-in string conversion transformer for encoding/decoding
     /// - Tip: Use when you need to ensure the key is written to a specific store or when the key may be useful before the config system is bootstrapped. For most use cases, prefer `init(_:in:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         store: ConfigStore,
@@ -262,11 +258,10 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init<T>(
         _ key: String,
         store: ConfigStore,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false
     ) where T: LosslessStringConvertible, Value == T? {
         self.init(
@@ -286,7 +281,6 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Recommended for most use cases as it integrates with the configuration system. For direct store access, use `init(_:store:default:cacheDefaultValue:)`
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -310,11 +304,10 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or conversion fails. Recommended for most use cases as it integrates with the configuration system
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init<T>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false
     ) where T: LosslessStringConvertible, Value == T? {
         self.init(
@@ -334,7 +327,6 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Stores the raw value and converts back to the enum type on retrieval.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         store: ConfigStore,
@@ -358,7 +350,6 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Stores the raw value and converts back to the enum type on retrieval.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init(
         _ key: String,
         in category: ConfigCategory,
@@ -382,11 +373,10 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init<T>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false
     ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
         self.init(
@@ -406,11 +396,10 @@ public extension ConfigKey {
     ///   - defaultValue: Value returned when key doesn't exist (typically `nil`)
     ///   - cacheDefaultValue: Whether to store the default value on first access
     /// - Note: Returns `nil` when the key doesn't exist or raw value conversion fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     init<T>(
         _ key: String,
         store: ConfigStore,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false
     ) where T: RawRepresentable, T.RawValue: LosslessStringConvertible, T? == Value {
         self.init(
@@ -431,7 +420,6 @@ public extension ConfigKey {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
     init(
         _ key: String,
@@ -459,7 +447,6 @@ public extension ConfigKey {
     ///   - cacheDefaultValue: Whether to store the default value on first access
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
     init(
         _ key: String,
@@ -488,12 +475,11 @@ public extension ConfigKey {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
     init<T>(
         _ key: String,
         in category: ConfigCategory,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
@@ -517,12 +503,11 @@ public extension ConfigKey {
     ///   - decoder: The JSON decoder to use for deserialization
     ///   - encoder: The JSON encoder to use for serialization
     /// - Note: Returns `nil` when the key doesn't exist or JSON decoding fails.
-    @available(*, deprecated, message: "Use .key() on Configs.Keys instead")
     @_disfavoredOverload
     init<T>(
         _ key: String,
         store: ConfigStore,
-        default defaultValue: @escaping @autoclosure () -> Value,
+        default defaultValue: @escaping @autoclosure () -> Value = nil,
         cacheDefaultValue: Bool = false,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder()
