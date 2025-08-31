@@ -29,7 +29,7 @@ import SwiftConfigs
 public extension Configs.Keys {
     
     var apiToken: RWConfigKey<String?> {
-        key("api-token", in: .secure, default: nil)
+        key("api-token", in: .secure)
     }
     
     var userID: ROConfigKey<UUID> { 
@@ -206,7 +206,7 @@ public extension Configs.Keys {
 extension Configs.Keys.Security {
 
     public var apiToken: RWConfigKey<String?> {
-        key("api-token", in: .secure, default: nil)
+        key("api-token", in: .secure)
     }
         
     public var encryptionEnabled: ROConfigKey<Bool> {
@@ -400,7 +400,7 @@ public extension Configs.Keys {
     
     // Optional types
     var optionalValue: ROConfigKey<String?> {
-        key("optional", in: .default, default: nil)
+        key("optional", in: .default)
     }
     
     // Using specific stores when needed
@@ -409,7 +409,7 @@ public extension Configs.Keys {
     }
     
     var secureToken: RWConfigKey<String?> {
-        key("secure-token", store: .keychain, default: nil)
+        key("secure-token", store: .keychain)
     }
 }
 ```

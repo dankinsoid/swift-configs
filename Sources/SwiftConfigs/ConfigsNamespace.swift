@@ -14,7 +14,7 @@ import Foundation
 ///     
 ///     struct Security: ConfigNamespaceKeys {
 ///         var apiToken: RWConfigKey<String?> {
-///             key("api-token", in: .secure, default: nil)
+///             key("api-token", in: .secure)
 ///         }
 ///         
 ///         var encryptionEnabled: ROConfigKey<Bool> {

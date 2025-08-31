@@ -161,42 +161,42 @@ public extension Configs.Keys {
 
     /// User-visible app name (CFBundleDisplayName)
     var displayName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("CFBundleDisplayName", in: .manifest, default: nil)
+        key("CFBundleDisplayName", in: .manifest)
     }
 
     /// Minimum OS version required (MinimumOSVersion)
     var minimumOSVersion: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("MinimumOSVersion", in: .manifest, default: nil)
+        key("MinimumOSVersion", in: .manifest)
     }
 
     /// Launch storyboard file name (UILaunchStoryboardName)
     var launchStoryboardName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("UILaunchStoryboardName", in: .manifest, default: nil)
+        key("UILaunchStoryboardName", in: .manifest)
     }
 
     /// Required device capabilities (UIRequiredDeviceCapabilities)
     var requiredDeviceCapabilities: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UIRequiredDeviceCapabilities", in: .manifest, default: nil)
+        key("UIRequiredDeviceCapabilities", in: .manifest)
     }
 
     /// Supported interface orientations for iPhone (UISupportedInterfaceOrientations)
     var supportedInterfaceOrientations: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UISupportedInterfaceOrientations", in: .manifest, default: nil)
+        key("UISupportedInterfaceOrientations", in: .manifest)
     }
 
     /// Supported interface orientations for iPad (UISupportedInterfaceOrientations~ipad)
     var supportedInterfaceOrientationsIpad: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UISupportedInterfaceOrientations~ipad", in: .manifest, default: nil)
+        key("UISupportedInterfaceOrientations~ipad", in: .manifest)
     }
 
     /// Main storyboard file name (UIMainStoryboardFile)
     var mainStoryboardFile: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("UIMainStoryboardFile", in: .manifest, default: nil)
+        key("UIMainStoryboardFile", in: .manifest)
     }
 
     /// Application category type (LSApplicationCategoryType)
     var applicationCategory: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("LSApplicationCategoryType", in: .manifest, default: nil)
+        key("LSApplicationCategoryType", in: .manifest)
     }
 }
 #endif
