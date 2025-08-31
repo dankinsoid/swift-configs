@@ -38,7 +38,6 @@ import Foundation
 /// The default `keyPrefix` is empty, emphasizing that organization is the main benefit.
 public protocol ConfigNamespaceKeys {
     
-    associatedtype Parent: ConfigNamespaceKeys
 
     /// Optional prefix applied to all keys in this namespace
     ///
@@ -46,16 +45,11 @@ public protocol ConfigNamespaceKeys {
     /// Override this property only when you need key prefixing.
     ///
     /// ```swift
-    /// static var keyPrefix: String { "feature/" }  // Optional key prefixing
+    /// var keyPrefix: String { "feature/" }  // Optional key prefixing
     /// ```
     ///
     /// - Returns: The prefix string, or empty string (default) for no prefix
-    static var keyPrefix: String { get }
-}
-
-extension Never: ConfigNamespaceKeys {
-
-    public typealias Parent = Never
+    var keyPrefix: String { get }
 }
 
 extension ConfigNamespaceKeys {
@@ -63,19 +57,7 @@ extension ConfigNamespaceKeys {
     /// Default implementation provides no prefix - namespaces are primarily for organization
     ///
     /// Override this property only when runtime key prefixing is needed.
-    public static var keyPrefix: String { "" }
-    
-    public var keyPrefix: String {
-        Self.fullKeyPrefix
-    }
-    
-    private static var fullKeyPrefix: String {
-        if Parent.self != Never.self {
-            return Parent.fullKeyPrefix + Self.keyPrefix
-        } else {
-            return Self.keyPrefix
-        }
-    }
+    public var keyPrefix: String { "" }
 }
 
 /// A configuration namespace that provides compile-time key organization

@@ -419,8 +419,6 @@ extension Configs.Keys {
     
     struct TestKeys: ConfigNamespaceKeys {
         
-        typealias Parent = Configs.Keys
-        
         var oldStringKey: RWConfigKey<String> {
             key("old_string_key", in: .default, default: "old_default")
         }

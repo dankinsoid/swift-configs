@@ -198,16 +198,17 @@ Group related keys in namespace extensions of `Configs.Keys`:
 public extension Configs.Keys {
 
     var security: Security { Security() }
-    
-    struct Security: ConfigNamespaceKeys {
+    struct Security: ConfigNamespaceKeys {}
+}
 
-        public var apiToken: RWConfigKey<String?> {
-            key("api-token", in: .secure, default: nil)
-        }
+extension Configs.Keys.Security {
+
+    public var apiToken: RWConfigKey<String?> {
+        key("api-token", in: .secure, default: nil)
+    }
         
-        public var encryptionEnabled: ROConfigKey<Bool> {
-            key("encryption-enabled", in: .secure, default: true)
-        }
+    public var encryptionEnabled: ROConfigKey<Bool> {
+        key("encryption-enabled", in: .secure, default: true)
     }
 }
 
@@ -229,16 +230,17 @@ Create deeper hierarchies by nesting namespace types:
 public extension Configs.Keys {
 
     var features: Features { Features() }
-
     struct Features: ConfigNamespaceKeys {
     
         public var auth: Auth { Auth() }
-        
-        public struct Auth: ConfigNamespaceKeys {
-            public var biometricEnabled: RWConfigKey<Bool> {
-                key("biometric-enabled", in: .default, default: false)
-            }
-        }
+        public struct Auth: ConfigNamespaceKeys {}
+    }
+}
+
+extension Configs.Keys.Features.Auth {
+
+    public var biometricEnabled: RWConfigKey<Bool> {
+        key("biometric-enabled", in: .default, default: false)
     }
 }
 

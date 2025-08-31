@@ -77,6 +77,90 @@ public extension Configs {
     /// This can be used to determine if remote configuration values have been loaded
     /// at least once since the application started.
     var hasFetched: Bool { registry.hasFetched }
+    
+    /// Gets a configuration value using a config key
+    func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
+        if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {
+            return result
+        }
+        return key.get(registry: registry)
+    }
+    
+    /// Sets a configuration value using a config key
+    @inlinable func set<Value>(_ key: ConfigKey<Value, ReadWrite>, _ newValue: Value) {
+        key.set(registry: registry, newValue)
+    }
+    
+    /// Removes a configuration value using a config key
+    @inlinable func remove<Value>(_ key: ConfigKey<Value, ReadWrite>) {
+        key.remove(registry: registry)
+    }
+    
+    /// Checks if a configuration value exists using a config key
+    func exists<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Bool {
+        if let overwrittenValue = values[key.name] {
+            return overwrittenValue is Value
+        }
+        return key.exists(registry: configs.registry)
+    }
+
+    /// Creates a new instance with an overridden configuration value
+    ///
+    /// This method returns a new instance with the specified key-value override.
+    /// The override takes precedence over stored values and is useful for testing
+    /// or temporary configuration changes.
+    ///
+    /// ```swift
+    /// let testConfigs = configs.with(\.apiToken, "test-token")
+    /// let debugConfigs = configs.with(\.debugMode, true)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - key: The configuration key to override
+    ///   - value: The override value, or `nil` to remove the override
+    /// - Returns: A new instance with the value override applied
+    /// - Note: This is a value type operation; the original instance remains unchanged
+    func with<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>, _ value: Value?) -> Self {
+        var result = self
+        result.values[key.name] = value
+        return result
+    }
+
+    /// Fetches if needed and returns the value for a specific key
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    @inlinable func fetchIfNeeded<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
+        try await fetchIfNeeded()
+        return get(key)
+    }
+    
+    /// Fetches configuration values and returns the value for a specific key
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    @inlinable func fetch<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
+        try await fetch()
+        return get(key)
+    }
+    
+    /// Registers a listener for changes to a specific configuration key
+    func onChange<Value, P: KeyAccess>(of key: ConfigKey<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
+        let overriden = values[key.name]
+        return key.onChange(registry: registry) { [overriden] value in
+            if let overriden, let result = overriden as? Value {
+                observer(result)
+                return
+            }
+            observer(value)
+        }
+        
+    }
+    /// Returns an async sequence for changes to a specific configuration key
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    func changes<Value, P: KeyAccess>(of key: ConfigKey<Value, P>) -> ConfigChangesSequence<Value> {
+        ConfigChangesSequence { observer in
+            self.onChange(of: key) { value in
+                observer(value)
+            }
+        }
+    }
 
     /// Fetches the latest configuration values from all stores
     ///

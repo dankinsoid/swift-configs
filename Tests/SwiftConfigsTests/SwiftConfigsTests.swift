@@ -271,8 +271,7 @@ private extension Configs.Keys {
     
     struct SecurityNamespace: ConfigNamespaceKeys {
         
-        typealias Parent = Configs.Keys
-        static var keyPrefix: String { "security." }
+        var keyPrefix: String { "security." }
         
         var apiToken: RWConfigKey<String> {
             key("api-token", in: .default, default: "default-token")
@@ -282,13 +281,13 @@ private extension Configs.Keys {
             key("encryption-enabled", in: .default, default: false)
         }
         
-        var auth: AuthNamespace { AuthNamespace() }
+        var auth: AuthNamespace { AuthNamespace(prefix: keyPrefix) }
     }
     
     struct AuthNamespace: ConfigNamespaceKeys {
         
-        typealias Parent = SecurityNamespace
-        static var keyPrefix: String { "auth." }
+        var prefix: String
+        var keyPrefix: String { prefix + "auth." }
         
         var jwtSecret: ROConfigKey<String> {
             key("jwt-secret", in: .default, default: "default-secret")
