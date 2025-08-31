@@ -70,9 +70,10 @@ ConfigSystem.bootstrap([
     .secure: .keychain,                // Sensitive data (tokens, passwords)
     .critical: .secureEnclave(),       // Maximum security with biometrics
     .syncedSecure: .keychain(iCloudSync: true), // Synced secure data
-    .environment: .environment,       // Environment variables
+    .environment: .environment,        // Environment variables
     .memory: .inMemory,                // Temporary/testing data
-    .remote: .userDefaults             // Remote configuration cache
+    .remote: .userDefaults,            // Remote configuration cache
+    .manifest: .infoPlist              // App Info.plist values
 ])
 ```
 
@@ -86,6 +87,7 @@ ConfigSystem.bootstrap([
 - **`.environment`** - Environment variables
 - **`.memory`** - In-memory storage
 - **`.remote`** - Remote configuration cache
+- **`.manifest`** - App manifest values, e.g. Info.plist
 
 ## Available Stores
 
