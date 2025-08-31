@@ -20,6 +20,11 @@ public protocol ConfigWrapper<Value> {
 
 public extension ConfigWrapper {
 
+    /// Creates a wrapper with the specified key
+    init(_ key: ConfigKey<Value, Access>) {
+        self.init(key, configs: Configs())
+    }
+
     /// Creates a wrapper using a key path to the configuration key
     ///
     /// This convenience initializer allows using key paths for cleaner syntax when
