@@ -131,72 +131,72 @@ public extension Configs.Keys {
 
     /// App bundle identifier (CFBundleIdentifier)
     var bundleIdentifier: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundleIdentifier", in: .manifest, default: "unknown.bundle.id")
+        ConfigKey("CFBundleIdentifier", in: .manifest, default: "unknown.bundle.id")
     }
 
     /// App bundle display name (CFBundleName)
     var bundleName: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundleName", in: .manifest, default: "App")
+        ConfigKey("CFBundleName", in: .manifest, default: "App")
     }
 
     /// Executable file name (CFBundleExecutable)
     var executableName: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundleExecutable", in: .manifest, default: "")
+        ConfigKey("CFBundleExecutable", in: .manifest, default: "")
     }
 
     /// Build number (CFBundleVersion)
     var buildNumber: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundleVersion", in: .manifest, default: "0")
+        ConfigKey("CFBundleVersion", in: .manifest, default: "0")
     }
 
     /// Marketing version string (CFBundleShortVersionString)
     var versionString: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundleShortVersionString", in: .manifest, default: "0.0")
+        ConfigKey("CFBundleShortVersionString", in: .manifest, default: "0.0")
     }
 
     /// Bundle package type (CFBundlePackageType)
     var packageType: ConfigKey<String, SwiftConfigs.ReadOnly> {
-        key("CFBundlePackageType", in: .manifest, default: "APPL")
+        ConfigKey("CFBundlePackageType", in: .manifest, default: "APPL")
     }
 
     /// User-visible app name (CFBundleDisplayName)
     var displayName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("CFBundleDisplayName", in: .manifest)
+        ConfigKey("CFBundleDisplayName", in: .manifest)
     }
 
     /// Minimum OS version required (MinimumOSVersion)
     var minimumOSVersion: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("MinimumOSVersion", in: .manifest)
+        ConfigKey("MinimumOSVersion", in: .manifest)
     }
 
     /// Launch storyboard file name (UILaunchStoryboardName)
     var launchStoryboardName: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("UILaunchStoryboardName", in: .manifest)
+        ConfigKey("UILaunchStoryboardName", in: .manifest)
     }
 
     /// Required device capabilities (UIRequiredDeviceCapabilities)
     var requiredDeviceCapabilities: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UIRequiredDeviceCapabilities", in: .manifest)
+        ConfigKey("UIRequiredDeviceCapabilities", in: .manifest)
     }
 
     /// Supported interface orientations for iPhone (UISupportedInterfaceOrientations)
     var supportedInterfaceOrientations: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UISupportedInterfaceOrientations", in: .manifest)
+        ConfigKey("UISupportedInterfaceOrientations", in: .manifest)
     }
 
     /// Supported interface orientations for iPad (UISupportedInterfaceOrientations~ipad)
     var supportedInterfaceOrientationsIpad: ConfigKey<[String]?, SwiftConfigs.ReadOnly> {
-        key("UISupportedInterfaceOrientations~ipad", in: .manifest)
+        ConfigKey("UISupportedInterfaceOrientations~ipad", in: .manifest)
     }
 
     /// Main storyboard file name (UIMainStoryboardFile)
     var mainStoryboardFile: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("UIMainStoryboardFile", in: .manifest)
+        ConfigKey("UIMainStoryboardFile", in: .manifest)
     }
 
     /// Application category type (LSApplicationCategoryType)
     var applicationCategory: ConfigKey<String?, SwiftConfigs.ReadOnly> {
-        key("LSApplicationCategoryType", in: .manifest)
+        ConfigKey("LSApplicationCategoryType", in: .manifest)
     }
 }
 #endif

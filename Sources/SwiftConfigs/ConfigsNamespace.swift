@@ -48,6 +48,8 @@ public protocol ConfigNamespaceKeys {
     /// ```
     ///
     /// - Returns: The prefix string, or empty string (default) for no prefix
+    /// - Warning: Prefix is not automatically concatenated, use `qualify(_:)` to apply it
+    /// - Warning: For nested namespaces, manually concatenate prefixes if needed
     var keyPrefix: String { get }
 }
 
@@ -57,6 +59,16 @@ extension ConfigNamespaceKeys {
     ///
     /// Override this property only when runtime key prefixing is needed.
     public var keyPrefix: String { "" }
+}
+
+public extension ConfigNamespaceKeys {
+    
+    /// Qualifies a raw key name with the namespace's prefix
+    ///
+    /// - Parameter raw: The raw key name to qualify
+    /// - Returns: The qualified key name with prefix applied
+    @inlinable
+    func qualify(_ raw: String) -> String { keyPrefix + raw }
 }
 
 /// A configuration namespace that provides compile-time key organization

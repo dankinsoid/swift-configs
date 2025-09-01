@@ -260,11 +260,11 @@ private final class MockProcessInfo: ProcessInfo, @unchecked Sendable {
 private extension Configs.Keys {
     
     var testKey: ROConfigKey<String> {
-        key("key", in: .default, default: "defaultValue")
+        ConfigKey("key", in: .default, default: "defaultValue")
     }
     
     var appSetting: ROConfigKey<String> {
-        key("app-setting", in: .default, default: "default-value")
+        ConfigKey("app-setting", in: .default, default: "default-value")
     }
     
     var security: SecurityNamespace { SecurityNamespace() }
@@ -274,11 +274,11 @@ private extension Configs.Keys {
         var keyPrefix: String { "security." }
         
         var apiToken: RWConfigKey<String> {
-            key("api-token", in: .default, default: "default-token")
+            ConfigKey(qualify("api-token"), in: .default, default: "default-token")
         }
         
         var encryptionEnabled: ROConfigKey<Bool> {
-            key("encryption-enabled", in: .default, default: false)
+            ConfigKey(qualify("encryption-enabled"), in: .default, default: false)
         }
         
         var auth: AuthNamespace { AuthNamespace(prefix: keyPrefix) }
@@ -290,11 +290,11 @@ private extension Configs.Keys {
         var keyPrefix: String { prefix + "auth." }
         
         var jwtSecret: ROConfigKey<String> {
-            key("jwt-secret", in: .default, default: "default-secret")
+            ConfigKey(qualify("jwt-secret"), in: .default, default: "default-secret")
         }
         
         var timeout: ROConfigKey<Int> {
-            key("timeout", in: .default, default: 30)
+            ConfigKey(qualify("timeout"), in: .default, default: 30)
         }
     }
 }

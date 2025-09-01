@@ -420,23 +420,23 @@ extension Configs.Keys {
     struct TestKeys: ConfigNamespaceKeys {
         
         var oldStringKey: RWConfigKey<String> {
-            key("old_string_key", in: .default, default: "old_default")
+            ConfigKey("old_string_key", in: .default, default: "old_default")
         }
         
         var newStringKey: RWConfigKey<String> {
-            key("new_string_key", in: .default, default: "new_default")
+            ConfigKey("new_string_key", in: .default, default: "new_default")
         }
         
         var anotherStringKey: RWConfigKey<String> {
-            key("another_string_key", in: .default, default: "another_default")
+            ConfigKey("another_string_key", in: .default, default: "another_default")
         }
         
         var oldBoolKey: RWConfigKey<Bool> {
-            key("old_bool_key", in: .default, default: false)
+            ConfigKey("old_bool_key", in: .default, default: false)
         }
         
         var readOnlyKey: ROConfigKey<String> {
-            key("readonly_key", in: .default, default: "readonly_default")
+            ConfigKey("readonly_key", in: .default, default: "readonly_default")
         }
         
         var migrationKey: RWConfigKey<String> {

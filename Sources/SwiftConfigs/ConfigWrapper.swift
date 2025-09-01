@@ -194,7 +194,7 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: { $0.store(for: category) },
                 as: .stringConvertable,
@@ -221,7 +221,7 @@ public extension ConfigWrapper where Value: LosslessStringConvertible {
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .stringConvertable,
@@ -250,7 +250,7 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .rawRepresentable,
@@ -277,7 +277,7 @@ public extension ConfigWrapper where Value: RawRepresentable, Value.RawValue: Lo
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .rawRepresentable,
@@ -311,7 +311,7 @@ public extension ConfigWrapper where Value: Codable {
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .json(decoder: decoder, encoder: encoder),
@@ -343,7 +343,7 @@ public extension ConfigWrapper where Value: Codable {
         configs: Configs = Configs()
     ) {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .json(decoder: decoder, encoder: encoder),
@@ -373,7 +373,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.stringConvertable),
@@ -400,7 +400,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.stringConvertable),
@@ -427,7 +427,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.rawRepresentable),
@@ -454,7 +454,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where T.RawValue: LosslessStringConvertible, Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.rawRepresentable),
@@ -486,7 +486,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 in: category,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),
@@ -518,7 +518,7 @@ public extension ConfigWrapper {
         configs: Configs = Configs()
     ) where Value == T? {
         self.init(
-            configs.keys.key(
+            ConfigKey(
                 key,
                 store: store,
                 as: .optional(.json(decoder: decoder, encoder: encoder)),

@@ -29,15 +29,15 @@ import SwiftConfigs
 public extension Configs.Keys {
     
     var apiToken: RWConfigKey<String?> {
-        key("api-token", in: .secure)
+        ConfigKey("api-token", in: .secure)
     }
     
     var userID: ROConfigKey<UUID> { 
-        key("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
+        ConfigKey("USER_ID", in: .syncedSecure, default: UUID(), cacheDefaultValue: true)
     }
     
     var serverURL: ROConfigKey<String> { 
-        key("SERVER_URL", in: .environment, default: "https://api.example.com")
+        ConfigKey("SERVER_URL", in: .environment, default: "https://api.example.com")
     }
 }
 ```
@@ -206,11 +206,11 @@ public extension Configs.Keys {
 extension Configs.Keys.Security {
 
     public var apiToken: RWConfigKey<String?> {
-        key("api-token", in: .secure)
+        ConfigKey("api-token", in: .secure)
     }
         
     public var encryptionEnabled: ROConfigKey<Bool> {
-        key("encryption-enabled", in: .secure, default: true)
+        ConfigKey("encryption-enabled", in: .secure, default: true)
     }
 }
 
@@ -242,7 +242,7 @@ public extension Configs.Keys {
 extension Configs.Keys.Features.Auth {
 
     public var biometricEnabled: RWConfigKey<Bool> {
-        key("biometric-enabled", in: .default, default: false)
+        ConfigKey("biometric-enabled", in: .default, default: false)
     }
 }
 
@@ -264,8 +264,7 @@ public extension Configs.Keys {
         public var keyPrefix: String { "env/" }  // Optional key prefixing
         
         public var apiUrl: ROConfigKey<String> {
-            key("api-url", in: .environment, default: "localhost")
-            // Final key name: "env/api-url"
+            ConfigKey(qualify("api-url"), in: .environment, default: "localhost") // "env/api-url"
         }
     }
 }
@@ -381,35 +380,35 @@ public extension Configs.Keys {
     
     // String-convertible types
     var count: ROConfigKey<Int> { 
-        key("count", in: .default, default: 0)
+        ConfigKey("count", in: .default, default: 0)
     }
     
     var rate: ROConfigKey<Double> {
-        key("rate", in: .default, default: 1.0)
+        ConfigKey("rate", in: .default, default: 1.0)
     }
     
     // Enum types
     var theme: ROConfigKey<Theme> { 
-        key("theme", in: .default, default: .light)
+        ConfigKey("theme", in: .default, default: .light)
     }
     
     // Codable types (stored as JSON)
     var settings: ROConfigKey<AppSettings> {
-        key("settings", in: .default, default: AppSettings())
+        ConfigKey("settings", in: .default, default: AppSettings())
     }
     
     // Optional types
     var optionalValue: ROConfigKey<String?> {
-        key("optional", in: .default)
+        ConfigKey("optional", in: .default)
     }
     
     // Using specific stores when needed
     var tempSetting: RWConfigKey<String> {
-        key("temp", store: .inMemory, default: "temp-value")
+        ConfigKey("temp", store: .inMemory, default: "temp-value")
     }
     
     var secureToken: RWConfigKey<String?> {
-        key("secure-token", store: .keychain)
+        ConfigKey("secure-token", store: .keychain)
     }
 }
 ```
@@ -423,11 +422,11 @@ public extension Configs.Keys {
     
     // Migrate from old boolean to new enum
     var notificationStyle: ROConfigKey<NotificationStyle> {
-        key("notification-style", in: .default, default: .none)
+        ConfigKey("notification-style", in: .default, default: .none)
     }
     
     private var oldNotificationsEnabled: ROConfigKey<Bool> {
-        key("notifications-enabled", in: .default, default: false)
+        ConfigKey("notifications-enabled", in: .default, default: false)
     }
     
     // Custom migration using multiplex stores can be done at bootstrap level:
@@ -555,7 +554,7 @@ Or add it through Xcode:
 
 ## Best Practices
 
-1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability using the `key()` function
+1. **Define keys as computed properties** in `Configs.Keys` extensions for organization and discoverability
 2. **Use namespaces for organization** - group related keys into `ConfigNamespaceKeys` types for compile-time structure
 3. **Use appropriate categories** for different security and persistence needs
 4. **Provide sensible defaults** for all configuration keys
