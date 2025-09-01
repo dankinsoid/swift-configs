@@ -11,10 +11,10 @@ import Foundation
 /// // Using with specific environment variables
 /// extension Configs.Keys {
 ///     var apiBaseURL: ROConfigKey<String> {
-///         key("API_BASE_URL", in: .environment, default: "https://api.example.com")
+///         ConfigKey("API_BASE_URL", in: .environment, default: "https://api.example.com")
 ///     }
 ///     var debugEnabled: ROConfigKey<Bool> {
-///         key("DEBUG_ENABLED", in: .environment, default: false)
+///         ConfigKey("DEBUG_ENABLED", in: .environment, default: false)
 ///     }
 /// }
 /// ```

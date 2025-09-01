@@ -40,10 +40,10 @@
     /// // Use for user preferences that should sync across devices
     /// extension Configs.Keys {
     ///     var preferredTheme: RWConfigKey {
-    ///         key("theme", in: .icloud, default: "system")
+    ///         ConfigKey("theme", in: .icloud, default: "system")
     ///     }
     ///     var notificationsEnabled: RWConfigKey {
-    ///         key("notifications", in: .icloud, default: true)
+    ///         ConfigKey("notifications", in: .icloud, default: true)
     ///     }
     /// }
     /// ```
