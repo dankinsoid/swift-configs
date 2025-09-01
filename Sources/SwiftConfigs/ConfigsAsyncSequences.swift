@@ -6,7 +6,7 @@ public struct ConfigChangesSequence<Element> {
 
     fileprivate let onChange: @Sendable (@escaping (Element) -> Void) -> Cancellation
 
-    init(
+    @usableFromInline init(
         onChange: @escaping @Sendable (@escaping (Element) -> Void) -> Cancellation
     ) {
         self.onChange = onChange

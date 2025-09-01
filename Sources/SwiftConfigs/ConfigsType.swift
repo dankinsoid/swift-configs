@@ -70,7 +70,9 @@ public extension ConfigsType {
     /// let secureToken = configs.security.apiToken  // Namespace access
     /// ```
     @inlinable subscript<Value>(dynamicMember keyPath: KeyPath<Keys, ConfigKey<Value, ReadOnly>>) -> Value {
-        self.get(keyPath)
+        _read {
+            yield configs[keys[keyPath: keyPath]]
+        }
     }
 
     /// Direct access to read-write configuration values
@@ -83,23 +85,54 @@ public extension ConfigsType {
     /// configs.security.userPrefs = prefs  // Namespace assignment
     /// ```
     @inlinable subscript<Value>(dynamicMember keyPath: KeyPath<Keys, ConfigKey<Value, ReadWrite>>) -> Value {
-        get {
-            get(keyPath)
+        _read {
+            yield configs[keys[keyPath: keyPath]]
         }
-        nonmutating set {
-            set(keyPath, newValue)
+        nonmutating _modify {
+            yield &configs[keys[keyPath: keyPath]]
+        }
+    }
+
+    /// Direct access to read-only configuration values
+    ///
+    /// Provides seamless access to configuration values with compile-time type safety and organization.
+    ///
+    /// ```swift
+    /// let userId = configs[.userId]
+    /// ```
+    @inlinable subscript<Value>(_ keyPath: KeyPath<Keys, ConfigKey<Value, ReadOnly>>) -> Value {
+        _read {
+            yield configs[keys[keyPath: keyPath]]
+        }
+    }
+
+    /// Direct access to read-write configuration values
+    ///
+    /// Provides seamless read and write access to configuration values with
+    /// compile-time type safety.
+    ///
+    /// ```swift
+    /// configs[.apiToken] = "new-token"
+    /// ```
+    @inlinable subscript<Value>(_ keyPath: KeyPath<Keys, ConfigKey<Value, ReadWrite>>) -> Value {
+        _read {
+            yield configs[keys[keyPath: keyPath]]
+        }
+        nonmutating _modify {
+            yield &configs[keys[keyPath: keyPath]]
         }
     }
 
     /// Gets a configuration value using a key path
+    @available(*, deprecated, message: "Use subscript access instead, e.g. let value: Value = configs[.myKey]")
     @inlinable func get<Value, P: KeyAccess>(_ keyPath: KeyPath<Keys, ConfigKey<Value, P>>) -> Value {
-        configs.get(keys[keyPath: keyPath])
+        configs[keys[keyPath: keyPath]]
     }
 
     /// Sets a configuration value using a key path
+    @available(*, deprecated, message: "Use subscript assignment instead, e.g. configs[.myKey] = value")
     @inlinable func set<Value>(_ keyPath: KeyPath<Keys, ConfigKey<Value, ReadWrite>>, _ newValue: Value) {
-        let key = keys[keyPath: keyPath]
-        configs.set(key, newValue)
+        configs[keys[keyPath: keyPath]] = newValue
     }
     
     /// Removes a configuration value using a key path

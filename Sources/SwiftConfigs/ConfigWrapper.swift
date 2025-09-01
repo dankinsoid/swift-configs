@@ -56,7 +56,9 @@ public extension ConfigWrapper where Access == ReadOnly {
 
     /// The current configuration value
     var value: Value {
-        configs.get(key)
+        _read {
+            yield configs[key]
+        }
     }
 }
 
@@ -65,11 +67,11 @@ public extension ConfigWrapper where Access == ReadWrite {
 
     /// The current configuration value
     var value: Value {
-        get {
-            configs.get(key)
+        _read {
+            yield configs[key]
         }
-        nonmutating set {
-            configs.set(key, newValue)
+        nonmutating _modify {
+            yield &configs[key]
         }
     }
 
@@ -109,7 +111,9 @@ public struct ROConfig<Value>: ConfigWrapper {
     /// This value is fetched from the configuration system on each access,
     /// ensuring it reflects the most current stored or default value.
     public var wrappedValue: Value {
-        configs.get(key)
+        _read {
+            yield configs[key]
+        }
     }
 
     /// Provides access to the wrapper itself for advanced operations
@@ -154,11 +158,11 @@ public struct RWConfig<Value>: ConfigWrapper {
     /// Reading fetches the current value from the configuration system.
     /// Writing immediately persists the value to the configured store.
     public var wrappedValue: Value {
-        get {
-            configs.get(key)
+        _read {
+            yield configs[key]
         }
-        nonmutating set {
-            configs.set(key, newValue)
+        nonmutating _modify {
+            yield &configs[key]
         }
     }
 

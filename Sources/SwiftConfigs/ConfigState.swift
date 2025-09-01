@@ -8,7 +8,9 @@ import SwiftUI
 public struct ROConfigState<Value>: DynamicProperty, ConfigWrapper {
 
     public var wrappedValue: Value {
-        configs.get(key)
+        _read {
+            yield configs[key]
+        }
     }
     
     /// Provides access to the wrapper itself for advanced operations
@@ -34,8 +36,12 @@ public struct ROConfigState<Value>: DynamicProperty, ConfigWrapper {
 public struct RWConfigState<Value>: DynamicProperty, ConfigWrapper {
 
     public var wrappedValue: Value {
-        get { configs.get(key) }
-        nonmutating set { configs.set(key, newValue) }
+        _read {
+            yield configs[key]
+        }
+        nonmutating _modify {
+            yield &configs[key]
+        }
     }
     
     /// Provides access to the wrapper itself for advanced operations

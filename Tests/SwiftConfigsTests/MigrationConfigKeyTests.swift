@@ -373,11 +373,11 @@ final class MigrationConfigKeyTests: XCTestCase {
         
         // Act
         let configs = Configs()
-        let result = configs.get(testKeys.migrationKey)
+        let result = configs[testKeys.migrationKey]
         
         // Assert
         XCTAssertEqual(result, "MIGRATED_OLD_VALUE")
-        XCTAssertEqual(configs.get(testKeys.newStringKey), "MIGRATED_OLD_VALUE")
+        XCTAssertEqual(configs[testKeys.newStringKey], "MIGRATED_OLD_VALUE")
         XCTAssertFalse(configs.exists(testKeys.oldStringKey))
     }
     

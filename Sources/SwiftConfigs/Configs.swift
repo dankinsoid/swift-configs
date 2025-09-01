@@ -40,7 +40,7 @@ public struct Configs: ConfigsType {
     public let registry: StoreRegistry
     
     /// In-memory value overrides for testing and temporary modifications
-    var values: [String: Any]
+    @usableFromInline var values: [String: Any]
     
     public var configs: Configs {
         get { self }
@@ -84,12 +84,13 @@ public extension Configs {
     /// compile-time type safety through namespace organization.
     ///
     /// ```swift
-    /// configs[.apiToken] = "new-token"  // Direct value assignment
-    /// configs[.Security.userPrefs] = prefs  // Namespace assignment
+    /// configs[.apiToken] = "new-token"
     /// ```
-    subscript<Value>(_ key: ConfigKey<Value, ReadWrite>) -> Value {
-        get { get(key) }
-        set { set(key, newValue) }
+    @inlinable subscript<Value>(_ key: ConfigKey<Value, ReadWrite>) -> Value {
+        get { _get(key) }
+        nonmutating set {
+            key.set(registry: registry, newValue)
+        }
     }
 
     /// Direct access to read-only configuration values
@@ -98,24 +99,22 @@ public extension Configs {
     /// with compile-time type safety and organization.
     ///
     /// ```swift
-    /// let userId = configs[.userId]  // Direct value access
-    /// let secureToken = configs[.Security.apiToken]  // Namespace access
+    /// let userId = configs[.userId]
     /// ```
-    subscript<Value>(_ key: ConfigKey<Value, ReadOnly>) -> Value {
-        get { get(key) }
+    @inlinable subscript<Value, A: KeyAccess>(_ key: ConfigKey<Value, A>) -> Value {
+        _get(key)
     }
 
     /// Gets a configuration value using a config key
-    func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
-        if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {
-            return result
-        }
-        return key.get(registry: registry)
+    @available(*, deprecated, message: "Use subscript access instead, e.g. let value: Value = configs[.myKey]")
+    @inlinable func get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
+        self[key]
     }
-    
+
     /// Sets a configuration value using a config key
+    @available(*, deprecated, message: "Use subscript assignment instead, e.g. configs[.myKey] = value")
     @inlinable func set<Value>(_ key: ConfigKey<Value, ReadWrite>, _ newValue: Value) {
-        key.set(registry: registry, newValue)
+        self[key] = newValue
     }
     
     /// Removes a configuration value using a config key
@@ -124,7 +123,7 @@ public extension Configs {
     }
     
     /// Checks if a configuration value exists using a config key
-    func exists<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Bool {
+    @inlinable func exists<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Bool {
         if let overwrittenValue = values[key.name] {
             return overwrittenValue is Value
         }
@@ -157,18 +156,18 @@ public extension Configs {
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     @inlinable func fetchIfNeeded<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
         try await fetchIfNeeded()
-        return get(key)
+        return self[key]
     }
     
     /// Fetches configuration values and returns the value for a specific key
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     @inlinable func fetch<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) async throws -> Value {
         try await fetch()
-        return get(key)
+        return self[key]
     }
     
     /// Registers a listener for changes to a specific configuration key
-    func onChange<Value, P: KeyAccess>(of key: ConfigKey<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
+    @inlinable func onChange<Value, P: KeyAccess>(of key: ConfigKey<Value, P>, _ observer: @escaping (Value) -> Void) -> Cancellation {
         let overriden = values[key.name]
         return key.onChange(registry: registry) { [overriden] value in
             if let overriden, let result = overriden as? Value {
@@ -181,7 +180,7 @@ public extension Configs {
     }
     /// Returns an async sequence for changes to a specific configuration key
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes<Value, P: KeyAccess>(of key: ConfigKey<Value, P>) -> ConfigChangesSequence<Value> {
+    @inlinable func changes<Value, P: KeyAccess>(of key: ConfigKey<Value, P>) -> ConfigChangesSequence<Value> {
         ConfigChangesSequence { observer in
             self.onChange(of: key) { value in
                 observer(value)
@@ -198,7 +197,7 @@ public extension Configs {
     /// - Throws: Aggregated errors from any stores that fail to fetch
     /// - Note: Individual store failures don't prevent other stores from succeeding
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetch() async throws {
+    @inlinable func fetch() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             registry.fetch { error in
                 if let error {
@@ -219,7 +218,7 @@ public extension Configs {
     /// - Parameter listener: Called with an updated Configs instance when changes occur
     /// - Returns: Cancellation token to stop listening for changes
     /// - Note: The listener is called on the main thread
-    func onChange(_ listener: @escaping (Configs) -> Void) -> Cancellation {
+    @inlinable func onChange(_ listener: @escaping (Configs) -> Void) -> Cancellation {
         registry.onChange {
             listener(self)
         }
@@ -227,19 +226,30 @@ public extension Configs {
 
     /// Fetches configuration values only if not already fetched
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func fetchIfNeeded() async throws {
+    @inlinable func fetchIfNeeded() async throws {
         guard !hasFetched else { return }
         try await fetch()
     }
 
     /// Returns an async sequence for configuration changes
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func changes() -> ConfigChangesSequence<Configs> {
+    @inlinable func changes() -> ConfigChangesSequence<Configs> {
         ConfigChangesSequence { observer in
             self.onChange { configs in
                 observer(configs)
             }
         }
+    }
+}
+
+extension Configs {
+
+    /// Gets a configuration value using a config key
+    @usableFromInline func _get<Value, P: KeyAccess>(_ key: ConfigKey<Value, P>) -> Value {
+        if let overwrittenValue = values[key.name], let result = overwrittenValue as? Value {
+            return result
+        }
+        return key.get(registry: registry)
     }
 }
 
