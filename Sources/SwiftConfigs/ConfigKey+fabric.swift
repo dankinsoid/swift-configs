@@ -1,7 +1,7 @@
 import Foundation
 
 public extension ConfigNamespaceKeys {
-    
+
     @inlinable
     func key<Value, Access: KeyAccess>(
         _ name: String,
@@ -29,60 +29,13 @@ public extension ConfigNamespaceKeys {
         default defaultValue: @escaping @autoclosure () -> Value,
         cacheDefaultValue: Bool
     ) -> ConfigKey<Value, Access> {
-        let name = keyPrefix + name
-        return ConfigKey(name) { registry in
-            let store = store(registry)
-            do {
-                if let value = try store.get(name, as: transformer) {
-                    return value
-                }
-            } catch {
-                ConfigSystem.fail(.retrievalFailed(key: name, error))
-            }
-            let result = defaultValue()
-            do {
-                if cacheDefaultValue, store.isWritable, let value = try transformer.encode(result) {
-                    try store.set(value, for: name)
-                }
-            } catch {
-                ConfigSystem.fail(.storingFailed(key: name, error))
-            }
-            return result
-        } set: { registry, newValue in
-            let store = store(registry)
-            if store.isWritable {
-                do {
-                    try store.set(transformer.encode(newValue), for: name)
-                } catch {
-                    ConfigSystem.fail(.storingFailed(key: name, error))
-                }
-            }
-        } remove: { registry in
-            let store = store(registry)
-            if store.isWritable {
-                try store.set(nil, for: name)
-            }
-        } exists: { registry in
-            let store = store(registry)
-            do {
-                return try store.exists(name)
-            } catch {
-                ConfigSystem.fail(.existenceCheckFailed(key: name, error))
-                return false
-            }
-        } onChange: { registry, observer in
-            let store = store(registry)
-            let cancellation = store.onChangeOfKey(name) { value in
-                do {
-                    if let value {
-                        try observer(transformer.decode(value))
-                    }
-                } catch {
-                    ConfigSystem.fail(.retrievalFailed(key: name, error))
-                }
-            }
-            return cancellation
-        }
+        ConfigKey(
+            keyPrefix + name,
+            store: store,
+            as: transformer,
+            default: defaultValue(),
+            cacheDefaultValue: cacheDefaultValue
+        )
     }
 
     /// Creates a configuration key with a specific store and transformer

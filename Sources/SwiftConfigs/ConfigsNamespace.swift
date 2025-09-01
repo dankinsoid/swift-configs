@@ -37,7 +37,6 @@ import Foundation
 ///
 /// The default `keyPrefix` is empty, emphasizing that organization is the main benefit.
 public protocol ConfigNamespaceKeys {
-    
 
     /// Optional prefix applied to all keys in this namespace
     ///

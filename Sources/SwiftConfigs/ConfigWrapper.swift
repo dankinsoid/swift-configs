@@ -356,6 +356,7 @@ public extension ConfigWrapper where Value: Codable {
 }
 
 public extension ConfigWrapper {
+
     /// Creates an optional configuration wrapper for string-convertible values in a category
     ///
     /// - Parameters:
