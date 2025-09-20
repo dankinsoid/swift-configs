@@ -8,7 +8,7 @@ public enum ConfigFail: Error, LocalizedError {
     case iCloudSyncAndSecureEnclaveAreIncompatible
     case noStoresAvailable(category: ConfigCategory?)
     case bootstrapCanBeCalledOnlyOnce
-    case bootstrapMustBeCalledBeforeUsingConfigs
+    case bootstrapMustBeCalledBeforeUsingConfigs(Set<ConfigCategory?>)
     
     public var errorDescription: String? {
         switch self {
@@ -28,8 +28,8 @@ public enum ConfigFail: Error, LocalizedError {
             }
         case .bootstrapCanBeCalledOnlyOnce:
             return "Configs.bootstrap() can only be called once."
-        case .bootstrapMustBeCalledBeforeUsingConfigs:
-            return "Configs.bootstrap() must be called before accessing any configs."
+        case let .bootstrapMustBeCalledBeforeUsingConfigs(categories):
+            return "Configs.bootstrap() must be called before accessing any configs. Accessed categories: \(categories.map { $0?.description ?? "all" }.joined(separator: ", "))"
         }
     }
 

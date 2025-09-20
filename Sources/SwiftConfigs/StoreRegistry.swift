@@ -32,7 +32,7 @@ public final class StoreRegistry: StoreRegistryType {
     private var didStartFetch = false
     private var cancellation: Cancellation?
     public let fallbackStore: ConfigStore
-    @Locked var didAccessStores = false
+    @Locked var didAccessStores: Set<ConfigCategory?> = []
     
     /// Initializes with a set of category stores
     public init(_ stores: [ConfigCategory: ConfigStore], fallback: ConfigStore = .inMemory()) {
@@ -90,7 +90,7 @@ public final class StoreRegistry: StoreRegistryType {
 
     /// Gets the appropriate store for a category
     public func store(for category: ConfigCategory?) -> ConfigStore {
-        didAccessStores = true
+        didAccessStores.insert(category)
         let stores: [ConfigStore] = if let category {
             stores.compactMap { category == $0.key ? $0.value : nil }
         } else {

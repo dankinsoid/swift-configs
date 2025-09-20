@@ -54,8 +54,8 @@ public enum ConfigSystem {
         } else {
             isBootstrapped = true
         }
-        if registry.didAccessStores, !isRunningTests {
-            ConfigSystem.fail(.bootstrapMustBeCalledBeforeUsingConfigs)
+        if !registry.didAccessStores.isEmpty, !isRunningTests {
+            ConfigSystem.fail(.bootstrapMustBeCalledBeforeUsingConfigs(registry.didAccessStores))
         }
 	}
 
