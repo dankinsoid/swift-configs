@@ -27,7 +27,9 @@ public struct MigrationConfigStore: ConfigStore {
         if let value = try newStore.get(key) {
             return value
         }
-        return try legacyStore.get(key)
+        let result = try legacyStore.get(key)
+        try? newStore.set(result, for: key) // Migrate value to new store
+        return result
     }
 
     public func exists(_ key: String) throws -> Bool {
