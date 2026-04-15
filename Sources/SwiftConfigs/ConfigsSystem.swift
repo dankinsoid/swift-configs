@@ -24,11 +24,12 @@ public enum ConfigSystem {
 		.secure: .inMemory(),
 		.critical: .inMemory(),
 		.syncedSecure: .inMemory(),
+        .synced: .inMemory(),
 		.remote: .inMemory(),
         .manifest: .inMemory()
 	]
 
-    static let registry = StoreRegistry(isPreview ? mockStores : defaultStores)
+    static let registry = StoreRegistry(isPreviewOrTests ? mockStores : defaultStores)
 
     @Locked private static var errorHandler: (ConfigFail) -> Void = defaultErrorHandler
     @Locked private static var isBootstrapped = false
@@ -73,7 +74,7 @@ public enum ConfigSystem {
         line: UInt = #line
     ) {
         bootstrap(
-            stores.merging(isPreview ? mockStores : defaultStores) { new, _ in new },
+            stores.merging(isPreviewOrTests ? mockStores : defaultStores) { new, _ in new },
             errorHandler: errorHandler,
             file: file,
             line: line
@@ -118,7 +119,9 @@ private extension [ConfigCategory: ConfigStore] {
 #if DEBUG
     let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || ProcessInfo.processInfo.processName == "XCPreviewAgent"
+    let isPreviewOrTests = isPreview || isRunningTests
 #else
     let isRunningTests = false
     let isPreview = false
+    let isPreviewOrTests = false
 #endif
