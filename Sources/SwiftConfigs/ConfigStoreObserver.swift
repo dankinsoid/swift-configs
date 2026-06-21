@@ -31,6 +31,8 @@ public final class ConfigStoreObserver {
     private var observers: [UUID: () -> Void] = [:]
     private var perKeyObservers: [String: [UUID: (_ specific: Bool, String?) -> Void]] = [:]
     private let lock = ReadWriteLock()
+    
+    public init() {}
 
     /// Notifies observers when a specific configuration key changes
     ///
