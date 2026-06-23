@@ -159,6 +159,53 @@ public extension ConfigKey {
             }
         )
     }
+
+    /// Combines two writable keys into a read-write key derived from both values
+    ///
+    /// Reads derive the combined value via `transform`; writes split it back into the two
+    /// source values via `reverseTransform` and store each in its source key. Both sources
+    /// must be writable.
+    ///
+    /// - Parameters:
+    ///   - a: The first source key
+    ///   - b: The second source key
+    ///   - transform: Function that derives the combined value from both source values
+    ///   - reverseTransform: Function that splits a combined value back into the two source values
+    /// - Returns: A read-write key backed by both source keys
+    static func combine<A, B>(
+        _ a: ConfigKey<A, ReadWrite>,
+        _ b: ConfigKey<B, ReadWrite>,
+        _ transform: @escaping (A, B) -> Value,
+        _ reverseTransform: @escaping (Value) -> (A, B)
+    ) -> ConfigKey<Value, ReadWrite> {
+        ConfigKey<Value, ReadWrite>(
+            "\(a.name)+\(b.name)",
+            get: { registry in
+                transform(a.get(registry: registry), b.get(registry: registry))
+            },
+            set: { registry, newValue in
+                let (newA, newB) = reverseTransform(newValue)
+                a.set(registry: registry, newA)
+                b.set(registry: registry, newB)
+            },
+            remove: { registry in
+                a.remove(registry: registry)
+                b.remove(registry: registry)
+            },
+            exists: { registry in
+                a.exists(registry: registry) && b.exists(registry: registry)
+            },
+            onChange: { registry, observer in
+                let emit = { observer(transform(a.get(registry: registry), b.get(registry: registry))) }
+                let cancelA = a.onChange(registry: registry) { _ in emit() }
+                let cancelB = b.onChange(registry: registry) { _ in emit() }
+                return Cancellation {
+                    cancelA.cancel()
+                    cancelB.cancel()
+                }
+            }
+        )
+    }
 }
 
 public typealias ROConfigKey<Value> = ConfigKey<Value, ReadOnly>
