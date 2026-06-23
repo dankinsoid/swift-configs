@@ -172,6 +172,9 @@ public extension ConfigKey {
     ///   - transform: Function that derives the combined value from both source values
     ///   - reverseTransform: Function that splits a combined value back into the two source values
     /// - Returns: A read-write key backed by both source keys
+    /// - Warning: Writes are not atomic. The two source keys are set sequentially; if one
+    ///   write fails or is ignored (e.g. its store is not writable), the sources may end up
+    ///   in an inconsistent partial state.
     static func combine<A, B>(
         _ a: ConfigKey<A, ReadWrite>,
         _ b: ConfigKey<B, ReadWrite>,
