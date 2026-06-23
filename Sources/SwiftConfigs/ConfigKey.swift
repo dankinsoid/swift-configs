@@ -120,6 +120,47 @@ public struct ConfigKey<Value, Access: KeyAccess> {
     }
 }
 
+public extension ConfigKey {
+
+    /// Combines two configuration keys into a read-only key derived from both values
+    ///
+    /// The combined value is recomputed via `transform` on every read and on every change
+    /// of either source key. The result is read-only because a combined value cannot be
+    /// decomposed back into the two source values.
+    ///
+    /// - Parameters:
+    ///   - a: The first source key
+    ///   - b: The second source key
+    ///   - transform: Function that derives the combined value from both source values
+    /// - Returns: A read-only key whose value is `transform(a, b)`
+    static func combine<A, AAccess, B, BAccess>(
+        _ a: ConfigKey<A, AAccess>,
+        _ b: ConfigKey<B, BAccess>,
+        _ transform: @escaping (A, B) -> Value
+    ) -> ConfigKey<Value, ReadOnly> {
+        ConfigKey<Value, ReadOnly>(
+            "\(a.name)+\(b.name)",
+            get: { registry in
+                transform(a.get(registry: registry), b.get(registry: registry))
+            },
+            set: { _, _ in },
+            remove: { _ in },
+            exists: { registry in
+                a.exists(registry: registry) && b.exists(registry: registry)
+            },
+            onChange: { registry, observer in
+                let emit = { observer(transform(a.get(registry: registry), b.get(registry: registry))) }
+                let cancelA = a.onChange(registry: registry) { _ in emit() }
+                let cancelB = b.onChange(registry: registry) { _ in emit() }
+                return Cancellation {
+                    cancelA.cancel()
+                    cancelB.cancel()
+                }
+            }
+        )
+    }
+}
+
 public typealias ROConfigKey<Value> = ConfigKey<Value, ReadOnly>
 public typealias RWConfigKey<Value> = ConfigKey<Value, ReadWrite>
 
